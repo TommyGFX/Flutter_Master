@@ -172,3 +172,19 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Phase-übergreifende Qualitätsstrategie ergänzt (Unit, Contract, Migration, Flutter Widget/Golden, E2E).
 - Fortschrittstabelle mit Status und jeweils nächstem konkreten Schritt ergänzt.
 - Referenzdokument: `docs/PLUGIN_ROADMAP_BILLING_SAAS.md`.
+
+## Schritt 16 – PLUGIN_ROADMAP Phase 0 umgesetzt (abgeschlossen)
+- **Schritt 0.1 Plugin-SDK stabilisiert**
+  - Plugin-Metadaten in der Persistenz standardisiert (`version`, `capabilities_json`, `required_permissions_json`, `lifecycle_status`).
+  - Lifecycle-Status auf `installed|enabled|suspended|retired` erweitert.
+  - Standard-Hooks als technische Basis normiert: `before_validate`, `before_finalize`, `after_finalize`, `before_send`, `after_payment`.
+  - Tenant/Company Feature-Flags eingeführt (`tenant_feature_flags`) inkl. API-Endpunkten.
+- **Schritt 0.2 Domain-Event-Bus + Outbox eingeführt**
+  - Persistente Domain-Events ergänzt (`domain_events`) für `invoice.created`, `invoice.finalized`, `payment.received`.
+  - Outbox-Pattern als persistente Lieferwarteschlange ergänzt (`outbox_messages`) inkl. Retry-Metadaten.
+  - Backend-Endpunkte für Event-Publishing und Outbox-Verarbeitung ergänzt.
+- **Schritt 0.3 Shared UI Shell (Flutter) ergänzt**
+  - Admin-Dashboard um Plugin-Shell-Sicht erweitert (Anzeige von Status, Version, Capabilities je Plugin).
+  - Shell nutzt capability-/permission-basierte Sichtbarkeit über Backend-Endpoint `/api/admin/plugin-shell`.
+
+**Abnahme-Status Phase 0:** Fundament ist implementiert; Plugins können mit standardisierten Metadaten geführt, per Lifecycle gesteuert, per Feature-Flags tenant/company-spezifisch geschaltet und über die UI-Shell sichtbar gemacht werden.

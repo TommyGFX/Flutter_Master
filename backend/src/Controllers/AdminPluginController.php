@@ -31,7 +31,7 @@ final class AdminPluginController
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare(
-            'SELECT plugin_key, display_name, is_active, updated_at
+            'SELECT plugin_key, display_name, version, lifecycle_status, capabilities_json, required_permissions_json, is_active, updated_at
             FROM tenant_plugins
             WHERE tenant_id = :tenant_id
             ORDER BY display_name ASC'
@@ -54,13 +54,14 @@ final class AdminPluginController
         }
 
         $isActive = (bool) ($request->json()['is_active'] ?? false);
+        $lifecycleStatus = $isActive ? 'enabled' : 'suspended';
 
         $approvalId = $this->approvals->createRequest(
             $tenantId,
             'plugin_status_change',
             'plugin',
             $pluginKey,
-            ['is_active' => $isActive],
+            ['is_active' => $isActive, 'lifecycle_status' => $lifecycleStatus],
             $actorId
         );
 
@@ -71,7 +72,7 @@ final class AdminPluginController
             'plugin',
             $pluginKey,
             'pending',
-            ['approval_id' => $approvalId, 'requested_state' => ['is_active' => $isActive]],
+            ['approval_id' => $approvalId, 'requested_state' => ['is_active' => $isActive, 'lifecycle_status' => $lifecycleStatus]],
             $request->ipAddress(),
             $request->userAgent()
         );
@@ -298,16 +299,27 @@ final class AdminPluginController
 
         if ($requestType === 'plugin_status_change') {
             $isActive = (bool) ($payload['is_active'] ?? false);
+            $lifecycleStatus = (string) ($payload['lifecycle_status'] ?? ($isActive ? 'enabled' : 'suspended'));
             $stmt = $pdo->prepare(
-                'INSERT INTO tenant_plugins (tenant_id, plugin_key, display_name, is_active)
-                VALUES (:tenant_id, :plugin_key, :display_name, :is_active)
-                ON DUPLICATE KEY UPDATE is_active = VALUES(is_active), updated_at = CURRENT_TIMESTAMP'
+                'INSERT INTO tenant_plugins (tenant_id, plugin_key, display_name, version, lifecycle_status, capabilities_json, required_permissions_json, is_active)
+                VALUES (:tenant_id, :plugin_key, :display_name, :version, :lifecycle_status, :capabilities_json, :required_permissions_json, :is_active)
+                ON DUPLICATE KEY UPDATE
+                    lifecycle_status = VALUES(lifecycle_status),
+                    is_active = VALUES(is_active),
+                    version = VALUES(version),
+                    capabilities_json = VALUES(capabilities_json),
+                    required_permissions_json = VALUES(required_permissions_json),
+                    updated_at = CURRENT_TIMESTAMP'
             );
 
             $stmt->execute([
                 'tenant_id' => $tenantId,
                 'plugin_key' => $targetId,
                 'display_name' => $this->pluginDisplayName($targetId),
+                'version' => '1.0.0',
+                'lifecycle_status' => $lifecycleStatus,
+                'capabilities_json' => json_encode([], JSON_THROW_ON_ERROR),
+                'required_permissions_json' => json_encode([], JSON_THROW_ON_ERROR),
                 'is_active' => $isActive ? 1 : 0,
             ]);
 

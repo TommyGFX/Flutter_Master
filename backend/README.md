@@ -138,11 +138,26 @@ Kritische Änderungen werden nicht direkt angewendet, sondern als Approval-Reque
 ### Endpunkte
 - `GET /api/admin/plugins`
 - `POST /api/admin/plugins/{plugin}/status` → erstellt `pending_approval`
+- `PUT /api/admin/plugins/{plugin}/lifecycle` → setzt Plugin-Lifecycle auf `installed|enabled|suspended|retired`
 - `GET /api/admin/roles/permissions`
 - `PUT /api/admin/roles/{roleKey}/permissions` → erstellt `pending_approval`
 - `GET /api/admin/approvals`
 - `POST /api/admin/approvals/{approvalId}/approve`
 - `POST /api/admin/approvals/{approvalId}/reject`
+
+## Plugin Foundation (Roadmap Phase 0)
+Neue Fundament-Endpunkte für standardisierte Plugin-Metadaten, Feature-Flags und Eventing:
+
+- `GET /api/admin/plugin-shell`
+  - Liefert sichtbare Plugins inklusive `version`, `lifecycle_status`, `capabilities`, `required_permissions` und Standard-Hooks.
+- `GET /api/admin/feature-flags`
+  - Liest Feature-Flags pro Tenant/Company (`X-Company-Id`, optional; default `default`).
+- `PUT /api/admin/feature-flags/{flagKey}`
+  - Setzt Feature-Flag (`{"enabled": true|false}`) tenant-/company-spezifisch.
+- `POST /api/admin/domain-events`
+  - Persistiert Domain-Events (`invoice.created`, `invoice.finalized`, `payment.received`) und erzeugt Outbox-Message.
+- `POST /api/admin/outbox/process`
+  - Verarbeitet ausstehende Outbox-Messages in Batches (`{"limit": 50}` optional).
 
 ### Persistenz
 - `approval_requests`: Anfrage, Payload, Requester/Approver, Status (`pending|approved|rejected`)
