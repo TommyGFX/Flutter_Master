@@ -253,7 +253,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 | Phase | Fokus | Status | Nächster konkreter Schritt |
 |---|---|---|---|
 | 0 | Plugin-Fundament | Geplant | Plugin-SDK Contract schriftlich fixieren |
-| 1 | Rechnungen & Dokumente | Geplant | Datenmodell + Nummernkreis-Migrationen |
+| 1 | Rechnungen & Dokumente | In Umsetzung (MVP-Backend implementiert) | Flutter Billing UI + E2E-Flow (Angebot -> bezahlt) vervollständigen |
 | 2 | Payments & Mahnwesen | Geplant | Payment-Provider-Abstraktion definieren |
 | 3 | Tax & Compliance | Geplant | USt-Regelmatrix DE/EU abbilden |
 | 4 | Abos | Geplant | Subscription Domainmodell definieren |

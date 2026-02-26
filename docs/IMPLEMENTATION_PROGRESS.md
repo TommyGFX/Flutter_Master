@@ -188,3 +188,23 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Shell nutzt capability-/permission-basierte Sichtbarkeit über Backend-Endpoint `/api/admin/plugin-shell`.
 
 **Abnahme-Status Phase 0:** Fundament ist implementiert; Plugins können mit standardisierten Metadaten geführt, per Lifecycle gesteuert, per Feature-Flags tenant/company-spezifisch geschaltet und über die UI-Shell sichtbar gemacht werden.
+
+
+## Schritt 17 – PLUGIN_ROADMAP Phase 1 (Billing Core MVP) umgesetzt (abgeschlossen)
+- Neues Backend-Plugin-Modul **`billing_core`** als Core-Domain für Rechnungen und Dokumente ergänzt.
+- Persistenz für das MVP-Datenmodell erweitert:
+  - `billing_documents`, `billing_line_items`, `billing_tax_breakdowns`, `billing_document_addresses`, `billing_document_history`
+  - `billing_customers`, `billing_customer_addresses`, `billing_customer_contacts`
+  - `billing_number_counters` für transaktionssichere Nummernkreise pro Jahr/Serie
+- API-Endpunkte für den End-to-End-MVP ergänzt:
+  - Dokumente: Erstellen/Ändern/Auslesen, Finalisieren, Statuswechsel, Historie, PDF-Export
+  - Flows: Angebot -> Rechnung (Snapshot-Konvertierung), Gutschrift auf Basis Ursprungsdokument
+  - Kunden-/Adressbuch: Firmen/Privatkunden inkl. Mehrfachadressen und Ansprechpartner
+- Fachlogik in `BillingCoreService` implementiert:
+  - deterministische Totals-/USt-Berechnung (Zeilenrabatte + globaler Rabatt + Versand/Fees)
+  - Fixierung der Währung pro Dokument (`currency_code`) inkl. dokumentgebundenem Wechselkurs (`exchange_rate`)
+  - Nummernkreis-Reservierung ausschließlich beim Finalisieren (nicht im Entwurf)
+  - Unveränderbarkeit finalisierter Dokumente über Draft-Mutability-Check
+- Dokumenthistorie je Beleg mit Domain-Aktionen als Audit-ähnliche Verlaufsspur ergänzt.
+
+**Abnahme-Status Phase 1:** MVP-End-to-End-Backbone für Angebot/Rechnung/Gutschrift inkl. Kundenstamm, Nummernkreis, Rechenlogik, PDF-Export, Status und Historie ist technisch implementiert.
