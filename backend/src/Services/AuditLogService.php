@@ -17,15 +17,17 @@ final class AuditLogService
         string $status,
         array $metadata,
         ?string $ipAddress,
-        ?string $userAgent
+        ?string $userAgent,
+        ?string $companyId = null
     ): void {
         $stmt = Database::connection()->prepare(
-            'INSERT INTO audit_logs (tenant_id, actor_id, action_key, target_type, target_id, status, metadata_json, ip_address, user_agent)
-            VALUES (:tenant_id, :actor_id, :action_key, :target_type, :target_id, :status, :metadata_json, :ip_address, :user_agent)'
+            'INSERT INTO audit_logs (tenant_id, company_id, actor_id, action_key, target_type, target_id, status, metadata_json, ip_address, user_agent)
+            VALUES (:tenant_id, :company_id, :actor_id, :action_key, :target_type, :target_id, :status, :metadata_json, :ip_address, :user_agent)'
         );
 
         $stmt->execute([
             'tenant_id' => $tenantId,
+            'company_id' => $companyId,
             'actor_id' => $actorId,
             'action_key' => $actionKey,
             'target_type' => $targetType,

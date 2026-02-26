@@ -296,3 +296,21 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Datenschutzfreundliches, optionales Event-Tracking auf Message-/Template-Ebene.
 
 **Abnahme-Status Phase 5:** Der digitale Zustellprozess ist als Backend-MVP implementiert (Template/Provider/Portal/Tracking). Für die vollständige Abnahme folgen ein Delivery-Worker mit Retry/Provider-Dispatch und die Flutter-Portal-UI für Endnutzer.
+
+## Schritt 22 – PLUGIN_ROADMAP Phase 7 (Team, Rechte, Multi-Company) umgesetzt (Backend-MVP)
+- Neues Backend-Plugin-Modul **`org_management`** ergänzt und in das API-Routing integriert.
+- Persistenz für Multi-Company und Teamzuordnungen erweitert:
+  - `org_companies` (mehrere Firmen pro Tenant/Account-Kontext)
+  - `org_company_memberships` (User-zu-Company-Rollenmapping)
+  - `audit_logs` um `company_id` erweitert, damit Governance pro Firmenkontext auswertbar bleibt.
+- Neue API-Endpunkte für Phase-7-Workflows ergänzt:
+  - Multi-Company: `GET|POST /api/org/companies`, `PUT /api/org/companies/{companyId}/memberships`, `POST /api/org/context/switch`
+  - Rollenmodell inkl. Custom Roles: `GET /api/org/roles`, `PUT /api/org/roles/{roleKey}`
+  - Audit-Log UI/Export-Backbone: `GET /api/org/audit-logs`, `POST /api/org/audit-logs/export`
+- Fachlogik in `OrgManagementService` und `OrgManagementController` implementiert:
+  - Berechtigte Kontextumschaltung pro User/Company mit Rückgabe der effektiven Permissions.
+  - Pflege tenant-spezifischer Rollen (inkl. Custom Roles) über bestehende `roles`/`role_permissions`.
+  - Audit-Log-Einträge für Company-/Membership-/Role-/Context-Aktionen inkl. `company_id`-Scope.
+  - CSV-Export für Audit-Logs als API-Response für nachgelagerte UI-Downloads.
+
+**Abnahme-Status Phase 7:** Multi-Company-Scope, rollenbasiertes Team-Management und auditierbare Governance sind als Backend-MVP umgesetzt. Nächster Ausbau: dedizierte Flutter-Org-Management-Masken mit geführter Kontextumschaltung und Export-UX.

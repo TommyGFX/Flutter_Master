@@ -254,6 +254,7 @@ CREATE TABLE IF NOT EXISTS stripe_dunning_cases (
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL,
+    company_id VARCHAR(64) NULL,
     actor_id VARCHAR(128) NOT NULL,
     action_key VARCHAR(128) NOT NULL,
     target_type VARCHAR(64) NOT NULL,
@@ -264,6 +265,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     user_agent VARCHAR(512) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_audit_tenant_created (tenant_id, created_at),
+    INDEX idx_audit_tenant_company_created (tenant_id, company_id, created_at),
     INDEX idx_audit_actor (tenant_id, actor_id)
 );
 
@@ -777,4 +779,35 @@ CREATE TABLE IF NOT EXISTS finance_reporting_webhook_logs (
     delivery_status VARCHAR(32) NOT NULL DEFAULT 'queued',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_finance_reporting_webhook_logs (tenant_id, provider, delivery_status, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS org_companies (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    company_id VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    legal_name VARCHAR(255) NULL,
+    tax_number VARCHAR(64) NULL,
+    vat_id VARCHAR(64) NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_org_company (tenant_id, company_id),
+    INDEX idx_org_company_active (tenant_id, is_active, name)
+);
+
+CREATE TABLE IF NOT EXISTS org_company_memberships (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    company_id VARCHAR(64) NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
+    role_key VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_org_company_membership (tenant_id, company_id, user_id),
+    INDEX idx_org_company_membership_user (tenant_id, user_id),
+    INDEX idx_org_company_membership_role (tenant_id, company_id, role_key),
+    CONSTRAINT fk_org_company_membership_company FOREIGN KEY (tenant_id, company_id)
+        REFERENCES org_companies (tenant_id, company_id)
 );
