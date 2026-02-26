@@ -791,6 +791,15 @@ class _AutomationCard extends ConsumerStatefulWidget {
 class _AutomationCardState extends ConsumerState<_AutomationCard> with _ApiClientMixin {
   bool loading = false;
   String output = '';
+  final TextEditingController stripePriceIdController = TextEditingController(text: 'price_demo');
+  final TextEditingController stripeCustomerIdController = TextEditingController(text: 'cus_demo');
+
+  @override
+  void dispose() {
+    stripePriceIdController.dispose();
+    stripeCustomerIdController.dispose();
+    super.dispose();
+  }
 
   Future<void> runPost(String path, Map<String, dynamic> payload) async {
     setState(() => loading = true);
@@ -806,23 +815,50 @@ class _AutomationCardState extends ConsumerState<_AutomationCard> with _ApiClien
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final stripePriceId = stripePriceIdController.text.trim();
+    final stripeCustomerId = stripeCustomerIdController.text.trim();
 
     return _EndpointPanel(
       title: l10n.automationTitle,
       loading: loading,
       result: output,
+      extra: Column(
+        children: [
+          TextField(
+            controller: stripePriceIdController,
+            decoration: const InputDecoration(
+              labelText: 'Stripe Price ID',
+              hintText: 'price_...',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: stripeCustomerIdController,
+            decoration: const InputDecoration(
+              labelText: 'Stripe Customer ID',
+              hintText: 'cus_...',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
       actions: [
         FilledButton(
-          onPressed: () => runPost('/stripe/checkout-session', {
-            'mode': 'subscription',
-            'line_items': [
-              {'price': 'price_demo', 'quantity': 1},
-            ],
-          }),
+          onPressed: stripePriceId.isEmpty
+              ? null
+              : () => runPost('/stripe/checkout-session', {
+                    'mode': 'subscription',
+                    'line_items': [
+                      {'price': stripePriceId, 'quantity': 1},
+                    ],
+                  }),
           child: Text(l10n.stripeCheckout),
         ),
         FilledButton(
-          onPressed: () => runPost('/stripe/customer-portal', {'customer_id': 'cus_demo'}),
+          onPressed: stripeCustomerId.isEmpty
+              ? null
+              : () => runPost('/stripe/customer-portal', {'customer_id': stripeCustomerId}),
           child: Text(l10n.stripePortal),
         ),
         FilledButton(
