@@ -14,6 +14,7 @@ use App\Controllers\TaxComplianceDeController;
 use App\Controllers\SubscriptionsBillingController;
 use App\Controllers\DocumentDeliveryController;
 use App\Controllers\FinanceReportingController;
+use App\Controllers\OrgManagementController;
 use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
@@ -29,6 +30,7 @@ use App\Services\TaxComplianceDeService;
 use App\Services\SubscriptionsBillingService;
 use App\Services\DocumentDeliveryService;
 use App\Services\FinanceReportingService;
+use App\Services\OrgManagementService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
@@ -64,6 +66,7 @@ final class App
         $subscriptionsBilling = new SubscriptionsBillingController(new SubscriptionsBillingService(Database::connection()));
         $documentDelivery = new DocumentDeliveryController(new DocumentDeliveryService(Database::connection()));
         $financeReporting = new FinanceReportingController(new FinanceReportingService(Database::connection()));
+        $orgManagement = new OrgManagementController(new OrgManagementService(Database::connection()), new RbacService(), new AuditLogService());
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -176,6 +179,16 @@ final class App
         $router->add('GET', '/api/billing/finance/connectors', [$financeReporting, 'listConnectors']);
         $router->add('PUT', '/api/billing/finance/connectors', [$financeReporting, 'upsertConnector']);
         $router->add('POST', '/api/billing/finance/connectors/{provider}/webhook', [$financeReporting, 'publishWebhook']);
+
+
+        $router->add('GET', '/api/org/companies', [$orgManagement, 'listCompanies']);
+        $router->add('POST', '/api/org/companies', [$orgManagement, 'upsertCompany']);
+        $router->add('PUT', '/api/org/companies/{companyId}/memberships', [$orgManagement, 'assignMembership']);
+        $router->add('POST', '/api/org/context/switch', [$orgManagement, 'switchContext']);
+        $router->add('GET', '/api/org/roles', [$orgManagement, 'listRoles']);
+        $router->add('PUT', '/api/org/roles/{roleKey}', [$orgManagement, 'upsertRole']);
+        $router->add('GET', '/api/org/audit-logs', [$orgManagement, 'listAuditLogs']);
+        $router->add('POST', '/api/org/audit-logs/export', [$orgManagement, 'exportAuditLogs']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);
