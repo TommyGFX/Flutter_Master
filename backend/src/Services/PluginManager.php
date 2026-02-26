@@ -4,18 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Plugin\PluginContract;
 use PDO;
 
 final class PluginManager
 {
-    private const ALLOWED_HOOKS = [
-        'before_validate',
-        'before_finalize',
-        'after_finalize',
-        'before_send',
-        'after_payment',
-    ];
-
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -33,7 +26,7 @@ final class PluginManager
 
     public function hooks(string $tenantId, string $hookName): array
     {
-        if (!in_array($hookName, self::ALLOWED_HOOKS, true)) {
+        if (!PluginContract::isAllowedHook($hookName)) {
             return [];
         }
 
@@ -44,6 +37,8 @@ final class PluginManager
 
     public function upsertDefinition(string $pluginKey, string $version, array $capabilities, array $requiredPermissions): void
     {
+        PluginContract::assertValidMetadata($pluginKey, $version, $capabilities, $requiredPermissions);
+
         $stmt = $this->pdo->prepare(
             'INSERT INTO plugin_definitions (plugin_key, version, display_name, capabilities_json, required_permissions_json)
              VALUES (:plugin_key, :version, :display_name, :capabilities_json, :required_permissions_json)

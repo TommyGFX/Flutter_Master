@@ -7,22 +7,13 @@ namespace App\Controllers;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Plugin\PluginContract;
 use App\Services\DomainEventService;
 use App\Services\RbacService;
 use InvalidArgumentException;
 
 final class PluginFoundationController
 {
-    private const ALLOWED_HOOKS = [
-        'before_validate',
-        'before_finalize',
-        'after_finalize',
-        'before_send',
-        'after_payment',
-    ];
-
-    private const LIFECYCLE_STATES = ['installed', 'enabled', 'suspended', 'retired'];
-
     public function __construct(private readonly RbacService $rbac)
     {
     }
@@ -59,7 +50,7 @@ final class PluginFoundationController
                 'lifecycle_status' => (string) ($row['lifecycle_status'] ?? 'installed'),
                 'capabilities' => $this->decodeJsonList($row['capabilities_json'] ?? null),
                 'required_permissions' => $requiredPermissions,
-                'hooks' => self::ALLOWED_HOOKS,
+                'hooks' => PluginContract::ALLOWED_HOOKS,
             ];
         }
 
@@ -168,8 +159,19 @@ final class PluginFoundationController
         }
 
         $status = is_string($request->json()['lifecycle_status'] ?? null) ? trim((string) $request->json()['lifecycle_status']) : '';
-        if (!in_array($status, self::LIFECYCLE_STATES, true)) {
-            Response::json(['error' => 'invalid_lifecycle_status', 'allowed' => self::LIFECYCLE_STATES], 422);
+        try {
+            PluginContract::assertLifecycleState($status);
+
+            $currentStatus = $this->currentLifecycleStatus($tenantId, $pluginKey);
+            PluginContract::assertLifecycleTransition($currentStatus, $status);
+        } catch (InvalidArgumentException $exception) {
+            $error = $exception->getMessage();
+            $payload = ['error' => $error];
+            if ($error === 'invalid_lifecycle_status') {
+                $payload['allowed'] = PluginContract::LIFECYCLE_STATES;
+            }
+
+            Response::json($payload, 422);
             return;
         }
 
@@ -188,6 +190,21 @@ final class PluginFoundationController
         ]);
 
         Response::json(['plugin_key' => $pluginKey, 'lifecycle_status' => $status]);
+    }
+
+    private function currentLifecycleStatus(string $tenantId, string $pluginKey): string
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT lifecycle_status FROM tenant_plugins WHERE tenant_id = :tenant_id AND plugin_key = :plugin_key LIMIT 1'
+        );
+        $stmt->execute(['tenant_id' => $tenantId, 'plugin_key' => $pluginKey]);
+
+        $status = $stmt->fetchColumn();
+        if (!is_string($status) || $status === '') {
+            return 'installed';
+        }
+
+        return $status;
     }
 
     private function resolveTenant(Request $request): ?string

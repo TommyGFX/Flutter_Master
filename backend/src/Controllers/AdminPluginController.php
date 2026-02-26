@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Plugin\PluginContract;
 use App\Services\ApprovalService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
@@ -300,6 +301,11 @@ final class AdminPluginController
         if ($requestType === 'plugin_status_change') {
             $isActive = (bool) ($payload['is_active'] ?? false);
             $lifecycleStatus = (string) ($payload['lifecycle_status'] ?? ($isActive ? 'enabled' : 'suspended'));
+            PluginContract::assertLifecycleState($lifecycleStatus);
+
+            $currentStatus = $this->currentLifecycleStatus($tenantId, $targetId, $pdo);
+            PluginContract::assertLifecycleTransition($currentStatus, $lifecycleStatus);
+
             $stmt = $pdo->prepare(
                 'INSERT INTO tenant_plugins (tenant_id, plugin_key, display_name, version, lifecycle_status, capabilities_json, required_permissions_json, is_active)
                 VALUES (:tenant_id, :plugin_key, :display_name, :version, :lifecycle_status, :capabilities_json, :required_permissions_json, :is_active)
@@ -362,6 +368,21 @@ final class AdminPluginController
         }
 
         throw new InvalidArgumentException('unsupported_request_type');
+    }
+
+    private function currentLifecycleStatus(string $tenantId, string $pluginKey, \PDO $pdo): string
+    {
+        $stmt = $pdo->prepare(
+            'SELECT lifecycle_status FROM tenant_plugins WHERE tenant_id = :tenant_id AND plugin_key = :plugin_key LIMIT 1'
+        );
+        $stmt->execute(['tenant_id' => $tenantId, 'plugin_key' => $pluginKey]);
+
+        $status = $stmt->fetchColumn();
+        if (!is_string($status) || $status === '') {
+            return 'installed';
+        }
+
+        return $status;
     }
 
     private function resolveTenant(Request $request): ?string

@@ -374,3 +374,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Fortschrittstabelle der Roadmap aktualisiert: Phase 0 von „Geplant“ auf „In Umsetzung (Contract schriftlich fixiert)“.
 
 **Abnahme-Status Schritt 0.1:** Der Plugin-SDK Contract ist schriftlich fixiert, versioniert und als verbindliche Grundlage für nachfolgende Plugin-Phasen dokumentiert.
+
+## Schritt 20 – PLUGIN_ROADMAP Phase 0 Contract-Tests ergänzt (abgeschlossen)
+- Zentrale Contract-Regeln als wiederverwendbare Backend-Komponente eingeführt (`PluginContract`):
+  - Validierung standardisierter Plugin-Metadaten (`plugin_key`, semver `version`, `capabilities`, `required_permissions`)
+  - Hook-Whitelist als kanonische Konstante (`before_validate`, `before_finalize`, `after_finalize`, `before_send`, `after_payment`)
+  - Lifecycle-States inkl. Transition-Validierung (`installed -> enabled -> suspended -> retired`, inkl. `suspended -> enabled` Reaktivierung)
+- Bestehende Runtime-Nutzung auf den Contract vereinheitlicht:
+  - `PluginManager` nutzt Contract-Validierung für Metadaten und Hook-Namen.
+  - `PluginFoundationController` liefert Hook-Whitelist aus dem Contract und validiert Lifecycle-Transitions vor dem Persistieren.
+  - `AdminPluginController` validiert Lifecycle-Transitions beim Anwenden freigegebener Plugin-Status-Änderungen.
+- Contract-Tests als ausführbares Backend-Testskript ergänzt:
+  - Prüft gültige/ungültige Metadaten, Hook-Whitelist und erlaubte/verbotene Lifecycle-Transitions.
+  - Datei: `backend/tests/Contract/plugin_contract_test.php`.
+
+**Abnahme-Status:** Der nächste konkrete Schritt aus Phase 0 („Contract-Tests für Plugin-Metadaten, Hook-Whitelist und Lifecycle-Transitions ergänzen“) ist umgesetzt und testbar dokumentiert.
