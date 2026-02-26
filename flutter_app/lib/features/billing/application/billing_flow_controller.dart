@@ -262,6 +262,7 @@ class ApiBillingFlowRepository implements BillingFlowRepository {
     return Options(headers: {
       'X-Tenant-Id': auth.tenantId ?? 'tenant_1',
       'X-Permissions': auth.permissions.join(','),
+      if ((auth.userId ?? '').isNotEmpty) 'X-User-Id': auth.userId!,
       if ((auth.token ?? '').isNotEmpty) 'Authorization': 'Bearer ${auth.token}',
     });
   }
@@ -338,11 +339,7 @@ class ApiBillingFlowRepository implements BillingFlowRepository {
   Future<BillingDocumentSnapshot> fetchDocumentSnapshot(int documentId) async {
     final response = await _dio.get('/billing/documents/$documentId', options: _options());
     final data = response.data['data'] as Map<String, dynamic>? ?? const {};
-    return BillingDocumentSnapshot(
-      documentNumber: data['document_number']?.toString(),
-      currencyCode: data['currency_code']?.toString() ?? 'EUR',
-      exchangeRate: (data['exchange_rate'] as num?)?.toDouble() ?? 1,
-    );
+    return BillingDocumentSnapshot.fromApiData(data);
   }
 
   @override
@@ -400,7 +397,29 @@ class BillingDocumentSnapshot {
     required this.exchangeRate,
   });
 
+  factory BillingDocumentSnapshot.fromApiData(Map<String, dynamic> data) {
+    return BillingDocumentSnapshot(
+      documentNumber: data['document_number']?.toString(),
+      currencyCode: data['currency_code']?.toString() ?? 'EUR',
+      exchangeRate: _parseExchangeRate(data['exchange_rate']),
+    );
+  }
+
   final String? documentNumber;
   final String currencyCode;
   final double exchangeRate;
+
+  static double _parseExchangeRate(Object? rawValue) {
+    if (rawValue is num) {
+      return rawValue.toDouble();
+    }
+    if (rawValue is String) {
+      final parsed = double.tryParse(rawValue);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+    throw FormatException('Invalid exchange_rate value: $rawValue');
+  }
 }

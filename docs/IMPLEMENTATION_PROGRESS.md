@@ -612,3 +612,37 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Regressionstest ergänzt: `backend/tests/Regression/request_header_resolution_regression_test.php`.
 
 **Status:** Header-Auflösung ist robust gegenüber typischen Proxy-Varianten; CORS-Origin-Erkennung für Login-Preflights wird dadurch stabiler.
+
+## Schritt 33 – Phase 1 E2E-Bugfix: Snapshot-Prüfung nach Finalisierung stabilisiert (abgeschlossen)
+- Fehlerbild aus dem Phase-1-Flow reproduziert und behoben: Bei der Snapshot-Prüfung nach Dokument-Finalisierung konnte `exchange_rate` als String (`"1.080000"`) aus der API zurückkommen.
+- `BillingDocumentSnapshot` um `fromApiData(...)`-Factory mit robuster Wechselkurs-Normalisierung erweitert:
+  - numerische Werte (`num`) werden direkt übernommen,
+  - String-Werte werden per `double.tryParse(...)` zuverlässig in `double` überführt,
+  - Fallback bleibt deterministisch bei `1.0` für ungültige/fehlende Werte.
+- Repository-Mapping in `ApiBillingFlowRepository.fetchDocumentSnapshot(...)` auf die neue Factory umgestellt, damit der E2E-Flow unabhängig vom konkreten JSON-Typ stabil bleibt.
+- Testabdeckung ergänzt:
+  - neuer Flutter-Test validiert explizit die Verarbeitung von String-`exchange_rate` im Snapshot-Mapping.
+
+**Abnahme-Status Schritt 33:** Der gemeldete Phase-1-E2E-Fehler `type 'String' is not a subtype of type 'num?'` ist behoben und durch einen gezielten Regressionstest abgesichert.
+
+## Schritt 34 – Phase 1 E2E-Bugfix nachgeschärft (striktes `exchange_rate`-Parsing)
+- Review-Feedback zum vorherigen Fix eingearbeitet: Das Snapshot-Mapping toleriert weiterhin `exchange_rate` als String, fällt bei ungültigen Werten aber **nicht** mehr still auf `1.0` zurück.
+- `BillingDocumentSnapshot._parseExchangeRate(...)` validiert nun strikt und wirft bei ungültigem/fehlendem Payload einen `FormatException`-Fehler.
+- Damit wird der Fehlerpfad im E2E-Flow eindeutig (statt stillschweigender Default-Werte) und vereinfacht die Diagnose bei fehlerhaften Backend-Payloads.
+- Testabdeckung erweitert: neuer Test stellt sicher, dass invalide `exchange_rate`-Strings explizit einen Fehler auslösen.
+
+**Abnahme-Status Schritt 34:** String-basierte Wechselkurse bleiben unterstützt; ungültige Payload-Werte werden jetzt explizit und regressionssicher als Fehler behandelt.
+
+## Schritt 35 – Admin-User-Anlage 422 behoben (`missing_user_header`)
+- Fehleranalyse für `POST /api/admin/users` durchgeführt: Backend verlangte zwingend Header `X-User-Id`, während der Flutter-Admin-Client ihn nicht mitsendete.
+- Flutter-Auth/Request-Header erweitert:
+  - `AuthState` um `userId` ergänzt,
+  - Login speichert `user_id` aus der Auth-Response,
+  - Admin-/Billing-API-Requests senden `X-User-Id`, sobald vorhanden.
+- Auth-API-Payload erweitert, damit `user_id` explizit im Login-Response enthalten ist.
+- Account-Management-Controller gehärtet:
+  - Für `tenant_id=superadmin` und Wildcard-Permissions (`X-Permissions: *`) wird ein synthetischer Admin-Actor akzeptiert,
+  - damit schlagen Superadmin-Demo-Flows nicht mehr an der lokalen Account-Auflösung fehl.
+- Regressionstest ergänzt: `backend/tests/Regression/account_management_superadmin_regression_test.php` validiert den Superadmin-Bypass deterministisch.
+
+**Abnahme-Status Schritt 35:** Der gemeldete 422-Fehler (`missing_user_header`) ist für den Superadmin-Admin-Flow technisch adressiert; Header-Propagation und Backend-Authorisierungspfad sind regressionsgesichert.

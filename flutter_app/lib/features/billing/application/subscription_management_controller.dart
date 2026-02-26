@@ -138,6 +138,7 @@ class SubscriptionManagementController extends Notifier<SubscriptionManagementSt
     return Options(
       headers: {
         'X-Tenant-Id': authState.tenantId ?? 'tenant_1',
+        if ((authState.userId ?? '').isNotEmpty) 'X-User-Id': authState.userId!,
         if ((authState.token ?? '').isNotEmpty) 'Authorization': 'Bearer ${authState.token}',
       },
     );
