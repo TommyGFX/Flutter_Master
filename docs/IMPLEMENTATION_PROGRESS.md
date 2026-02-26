@@ -658,3 +658,20 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - bestehende Mahnstufen-Tagesdrossel-/Zins-/Payment-Kind-Checks bleiben aktiv.
 
 **Abnahme-Status Schritt 36:** Phase-2-Flow ist End-to-End (Adapter -> Service -> Persistenz -> Read-Model) vervollständigt; Mahnstufen-Regression bleibt abgesichert.
+
+## Schritt 37 – Phase 4 produktiv verdrahtet (Provider-Webhooks + Completion-Callbacks)
+- `subscriptions_billing` um produktionsfähige Callback-/Webhook-Verarbeitung erweitert:
+  - Neuer Endpoint `POST /api/billing/subscriptions/payment-method-updates/complete` für providerseitige Completion-Callbacks (token-basiert, tenant-sicher).
+  - Neuer Endpoint `POST /api/billing/subscriptions/providers/{provider}/webhook` für Stripe/PayPal-Webhook-Inbound.
+- Service-Layer in `SubscriptionsBillingService` ausgebaut:
+  - Abschlusslogik für Payment-Method-Updates inkl. Status-Transition (`open -> completed|failed`).
+  - Bei erfolgreichem Abschluss werden `subscription_contracts.payment_method_ref` aktualisiert sowie offene Dunning-Fälle (`payment_method_update_required=1`) auf retry-fähig zurückgesetzt.
+  - Provider-Webhooks mappen Stripe- und PayPal-Sandbox-Events auf denselben Abschlussfluss.
+  - Signaturprüfung über Shared-Secret-Validierung (HMAC-SHA256) via Umgebungsvariablen:
+    - `SUBSCRIPTIONS_STRIPE_WEBHOOK_SECRET`
+    - `SUBSCRIPTIONS_PAYPAL_WEBHOOK_SECRET`
+- Regressionstest für End-to-End-Abnahme ergänzt:
+  - `backend/tests/Regression/subscriptions_billing_phase4_webhooks_regression_test.php`
+  - Prüft Completion-Callback, Stripe-Webhook und PayPal-Webhook inklusive Persistenz-/Dunning-/Audit-Zyklus-Effekten in einem durchgängigen Szenario.
+
+**Abnahme-Status Schritt 37:** Der zuvor offene Phase-4-Backlogpunkt „Provider-Webhooks/Completion-Callbacks produktiv anbinden“ ist technisch umgesetzt und regressionsgesichert. Für die finale externe Abnahme mit echten PSP-Sandboxes müssen nur noch tenant-spezifische Sandbox-Secrets im Zielsystem gesetzt und gegen die realen Provider-Endpoints durchgeklickt werden.

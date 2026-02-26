@@ -250,7 +250,7 @@ _Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter
 | 1 | Rechnungen & Dokumente | **Abgeschlossen** (Abnahme via E2E-Flow inkl. Nummernkreis/Mehrwährung/PDF-Export dokumentiert) | Phase 2 End-to-End mit Payment-Provider-Adapter (Stripe/PayPal) + Mahnstufen-Regression absichern |
 | 2 | Payments & Mahnwesen | **Abgeschlossen** (Zahlungseingänge inkl. Teilzahlungen/Skonto, tenant-spezifische Gebühren-/Verzugszinsregeln und Bank-/SEPA-Infos umgesetzt) | Kein offener Backlog-Eintrag (Phase-2-Umfang abgeschlossen) |
 | 3 | Tax & Compliance | In Umsetzung (CI-Gate um umgebungsbezogene Produktiv-Validator-Endpoints/Secrets inkl. Auth erweitert; GitHub-Environments dev/staging/prod verdrahtet) | Nächster Schritt: Secrets je Umgebung in GitHub Environments befüllen und gegen reale Referenzinstanzen abnehmen (Abnahmeprotokoll erfassen) |
-| 4 | Abos | In Umsetzung (Provider-Adapter + Flutter Abo-Management-UI ergänzt) | Nächster Schritt: Provider-Webhooks/Completion-Callbacks produktiv anbinden und End-to-End mit echten PSP-Sandboxes abnehmen |
+| 4 | Abos | In Umsetzung (Provider-Adapter + Flutter Abo-Management-UI ergänzt; Provider-Webhooks + Completion-Callbacks produktiv verdrahtet und regressionsgesichert) | Nächster Schritt: Reale PSP-Sandbox-Abnahme mit tenant-spezifischen Secrets/Endpoints durchführen und Abnahmeprotokoll dokumentieren |
 | 5 | E-Mail & Versand | In Umsetzung (Backend-MVP implementiert) | Delivery-Worker + Portal-UI-Flow vervollständigen |
 | 6 | Reporting | In Umsetzung (Backend-MVP implementiert) | Connector-Synchronisation + DATEV/Excel-Datei-Streaming produktiv härten |
 | 7 | Team & Rechte | Teilweise vorhanden | Rollen auf Plugin-Capabilities mappen |
