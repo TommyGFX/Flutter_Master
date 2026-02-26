@@ -127,3 +127,66 @@ CREATE TABLE IF NOT EXISTS tenant_smtp_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_tenant_smtp (tenant_id)
 );
+
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    stripe_event_id VARCHAR(128) NOT NULL,
+    event_type VARCHAR(128) NOT NULL,
+    tenant_id VARCHAR(64) NULL,
+    stripe_customer_id VARCHAR(128) NULL,
+    stripe_subscription_id VARCHAR(128) NULL,
+    event_status VARCHAR(32) NOT NULL DEFAULT 'received',
+    error_message VARCHAR(512) NULL,
+    payload_json JSON NOT NULL,
+    processed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_stripe_event_id (stripe_event_id),
+    INDEX idx_stripe_event_tenant (tenant_id, event_type)
+);
+
+CREATE TABLE IF NOT EXISTS tenant_provisioning_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    stripe_event_pk BIGINT UNSIGNED NOT NULL,
+    stripe_session_id VARCHAR(128) NOT NULL,
+    stripe_customer_id VARCHAR(128) NULL,
+    provisioning_status VARCHAR(32) NOT NULL,
+    payload_json JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_provisioning_session (stripe_session_id),
+    INDEX idx_provisioning_tenant (tenant_id),
+    CONSTRAINT fk_provisioning_event FOREIGN KEY (stripe_event_pk) REFERENCES stripe_webhook_events (id)
+);
+
+CREATE TABLE IF NOT EXISTS tenant_subscription_entitlements (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    stripe_event_pk BIGINT UNSIGNED NOT NULL,
+    stripe_subscription_id VARCHAR(128) NOT NULL,
+    entitlement_status VARCHAR(32) NOT NULL,
+    current_period_end TIMESTAMP NULL,
+    payload_json JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenant_subscription (tenant_id, stripe_subscription_id),
+    INDEX idx_entitlement_status (tenant_id, entitlement_status),
+    CONSTRAINT fk_entitlement_event FOREIGN KEY (stripe_event_pk) REFERENCES stripe_webhook_events (id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_dunning_cases (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    stripe_event_pk BIGINT UNSIGNED NOT NULL,
+    stripe_invoice_id VARCHAR(128) NOT NULL,
+    dunning_status VARCHAR(32) NOT NULL,
+    attempt_count INT NOT NULL DEFAULT 0,
+    next_payment_attempt_at TIMESTAMP NULL,
+    resolved_at TIMESTAMP NULL,
+    payload_json JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_dunning_invoice (tenant_id, stripe_invoice_id),
+    INDEX idx_dunning_status (tenant_id, dunning_status),
+    CONSTRAINT fk_dunning_event FOREIGN KEY (stripe_event_pk) REFERENCES stripe_webhook_events (id)
+);

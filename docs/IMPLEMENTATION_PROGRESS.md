@@ -47,7 +47,7 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 1. Persistente Queue Worker (Redis/MySQL polling).
 2. PDF Rendering (z. B. Dompdf) und SMTP Versand (z. B. Symfony Mailer).
 3. Plugin-Lifecycle UI + Rechteverwaltung im Admin-Bereich.
-4. Domain-Persistenz für Stripe-Events (Provisionierung, Entitlements, Dunning).
+4. Persistente Audit-Logs und Approval-Flow für kritische RBAC-/Plugin-Änderungen.
 
 
 ## Schritt 5 – JWT Hardening + Refresh Tokens (abgeschlossen)
@@ -92,3 +92,20 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Plugin Lifecycle Verwaltung (Aktivieren/Deaktivieren)
   - Rechteverwaltung (Role → kommagetrennte Permission-Liste)
 - Auth-State erweitert, damit `tenant_id` und `permissions` aus dem Login-Response tenant-sicher im Frontend genutzt werden.
+
+
+## Schritt 9 – Domain-Routing + Stripe Domain-Persistenz (abgeschlossen)
+- Produktionsdomains festgelegt:
+  - Frontend CRM: `https://crm.ordentis.de`
+  - Backend API: `https://api.ordentis.de`
+- Backend CORS für CRM-Domain + lokale Dev-Origin ergänzt und OPTIONS-Preflight verarbeitet.
+- Flutter-Dio Standard-API-Base auf `https://api.ordentis.de/api` umgestellt (überschreibbar per `--dart-define=API_BASE_URL=...`).
+- Stripe Webhook-Handling um idempotente Persistenz erweitert:
+  - Event Journal (`stripe_webhook_events`)
+  - Provisioning-Projektion (`tenant_provisioning_events`)
+  - Entitlement-Projektion (`tenant_subscription_entitlements`)
+  - Dunning-Projektion (`stripe_dunning_cases`)
+- Verarbeitungspfade implementiert für:
+  - `checkout.session.completed` (Provisionierung)
+  - `customer.subscription.updated|deleted` (Entitlements)
+  - `invoice.payment_failed|invoice.paid` (Dunning Open/Resolve)

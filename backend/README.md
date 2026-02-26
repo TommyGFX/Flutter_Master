@@ -16,6 +16,11 @@ Kopiere `.env.example` nach `.env` und passe DB/Stripe/SMTP Werte an.
 - `src/Repositories`: DB-Zugriff
 - `src/Templates`: Email/PDF Template Hooks
 
+## Domains & CORS
+- Produktions-API Domain: `https://api.ordentis.de`
+- Erlaubte Frontend-Origin: `https://crm.ordentis.de`
+- Für lokale Entwicklung sind zusätzlich `http://localhost:3000` und `http://localhost:5173` freigegeben.
+
 ## API Einstiegspunkte
 - `POST /api/login/company`
 - `POST /api/login/employee`
@@ -76,9 +81,13 @@ Beispiel-Body:
 
 ### Webhook
 - `POST /api/stripe/webhook`
-- `POST /api/pdf/render`
-- `POST /api/email/send`
 - Wenn `STRIPE_WEBHOOK_SECRET` gesetzt ist, wird die Signatur zwingend validiert.
+- Domain-Persistenz wird in folgenden Tabellen abgelegt:
+  - `stripe_webhook_events` (Roh-Event + Verarbeitungsergebnis, idempotent über `stripe_event_id`)
+  - `tenant_provisioning_events` (`checkout.session.completed`)
+  - `tenant_subscription_entitlements` (`customer.subscription.updated|deleted`)
+  - `stripe_dunning_cases` (`invoice.payment_failed|invoice.paid`)
+
 
 
 ## PDF Rendering (Dompdf)
