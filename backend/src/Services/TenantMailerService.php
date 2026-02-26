@@ -13,21 +13,18 @@ final class TenantMailerService
 {
     public function send(string $to, string $subject, string $html, array $smtpConfig): void
     {
-        $transport = new EsmtpTransport($smtpConfig['host'], (int) $smtpConfig['port']);
+        $encryption = strtolower((string) ($smtpConfig['encryption'] ?? 'tls'));
+        $useSslTransport = $encryption === 'ssl';
+
+        $transport = new EsmtpTransport($smtpConfig['host'], (int) $smtpConfig['port'], $useSslTransport);
 
         if (($smtpConfig['username'] ?? '') !== '') {
             $transport->setUsername((string) $smtpConfig['username']);
             $transport->setPassword((string) ($smtpConfig['password'] ?? ''));
         }
 
-        $encryption = strtolower((string) ($smtpConfig['encryption'] ?? 'tls'));
-        if ($encryption === 'ssl') {
-            $transport->setTls(false);
-            $transport->setStreamOptions(['ssl' => ['crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT]]);
-        }
-
         if ($encryption === 'none') {
-            $transport->setTls(false);
+            $transport->setAutoTls(false);
         }
 
         $mailer = new Mailer($transport);
