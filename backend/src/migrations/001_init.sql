@@ -81,3 +81,24 @@ CREATE TABLE IF NOT EXISTS crm_items (
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    token_id VARCHAR(64) NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    tenant_id VARCHAR(64) NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    entrypoint VARCHAR(64) NOT NULL,
+    permissions_json JSON NOT NULL,
+    is_superadmin TINYINT(1) DEFAULT 0,
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(512) NULL,
+    expires_at TIMESTAMP NOT NULL,
+    revoked TINYINT(1) DEFAULT 0,
+    revoked_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_refresh_token_id (token_id),
+    UNIQUE KEY uq_refresh_token_hash (token_hash),
+    INDEX idx_refresh_user (tenant_id, user_id),
+    INDEX idx_refresh_expires (expires_at)
+);

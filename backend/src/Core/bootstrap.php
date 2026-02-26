@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+$composerAutoload = __DIR__ . '/../../vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+}
+
 spl_autoload_register(static function (string $class): void {
     $prefix = 'App\\';
     $baseDir = __DIR__ . '/../';

@@ -27,4 +27,14 @@ final class Request
         $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
         return $_SERVER[$key] ?? null;
     }
+    public function ipAddress(): ?string
+    {
+        return $_SERVER['REMOTE_ADDR'] ?? null;
+    }
+
+    public function userAgent(): ?string
+    {
+        return $this->header('User-Agent');
+    }
+
 }

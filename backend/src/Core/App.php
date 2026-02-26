@@ -9,6 +9,7 @@ use App\Controllers\CrudController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
 use App\Services\JwtService;
+use App\Services\RefreshTokenService;
 use App\Services\StripeService;
 
 final class App
@@ -18,7 +19,7 @@ final class App
         $router = new Router();
         $request = new Request();
 
-        $auth = new AuthController(new JwtService());
+        $auth = new AuthController(new JwtService(), new RefreshTokenService());
         $crud = new CrudController();
         $upload = new UploadController();
         $stripe = new StripeController(new StripeService());
@@ -27,6 +28,8 @@ final class App
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
         $router->add('POST', '/api/login/portal', [$auth, 'loginPortal']);
         $router->add('POST', '/api/admin/login', [$auth, 'loginAdmin']);
+        $router->add('POST', '/api/token/refresh', [$auth, 'refresh']);
+        $router->add('POST', '/api/logout', [$auth, 'logout']);
 
         $router->add('GET', '/api/crud/{resource}', [$crud, 'index']);
         $router->add('POST', '/api/crud/{resource}', [$crud, 'store']);
