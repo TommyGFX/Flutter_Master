@@ -675,3 +675,17 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Prüft Completion-Callback, Stripe-Webhook und PayPal-Webhook inklusive Persistenz-/Dunning-/Audit-Zyklus-Effekten in einem durchgängigen Szenario.
 
 **Abnahme-Status Schritt 37:** Der zuvor offene Phase-4-Backlogpunkt „Provider-Webhooks/Completion-Callbacks produktiv anbinden“ ist technisch umgesetzt und regressionsgesichert. Für die finale externe Abnahme mit echten PSP-Sandboxes müssen nur noch tenant-spezifische Sandbox-Secrets im Zielsystem gesetzt und gegen die realen Provider-Endpoints durchgeklickt werden.
+
+## Schritt 38 – Phase 5 erweitert (Delivery-Worker + Portal-UI-Flow)
+- `document_delivery` um Worker-Endpoint ergänzt: `POST /api/billing/delivery/process` (optional `limit`).
+- Queue-Worker-Fachlogik ergänzt (`DocumentDeliveryService::processQueue`):
+  - verarbeitet `email_queue` mit Zuständen `queued|retry|processing|sent|failed`.
+  - Exponential Backoff über `retry_count`/`next_retry_at`, Fehlerdiagnose in `last_error`.
+  - Provider-Dispatch-Validierung für SMTP/SendGrid/Mailgun inkl. Konfigurationschecks.
+- Portalzugriff robust gegen Login-Identitäten gemacht: `X-User-Id` wird als Account-ID **oder** als E-Mail-Identifier aufgelöst (kompatibel zum Portal-Login-Flow).
+- `email_queue`-Schema für Workerbetrieb erweitert (`retry_count`, `next_retry_at`, `processed_at`, `last_error`, `provider`, `message_id`, `updated_at`, Worker-Indizes).
+- Flutter-Portal-Flow umgesetzt:
+  - neuer Portal-Screen mit Dokumentliste + Detailansicht inkl. Zahlungsoptionen.
+  - Login-Routing leitet `entrypoint=customer` direkt ins Kundenportal (`/portal`).
+
+**Abnahme-Status Schritt 38:** Delivery-Worker und Kundenportal-UI sind implementiert; offener Abschluss für Phase 5 ist die produktionsnahe Sandbox-Abnahme der Provider inkl. Tracking-/Monitoring-Nachweis.

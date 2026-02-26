@@ -187,6 +187,7 @@ final class App
         $router->add('PUT', '/api/billing/delivery/templates/{templateKey}', [$documentDelivery, 'upsertTemplate']);
         $router->add('GET', '/api/billing/delivery/provider', [$documentDelivery, 'getProviderConfig']);
         $router->add('PUT', '/api/billing/delivery/provider', [$documentDelivery, 'upsertProviderConfig']);
+        $router->add('POST', '/api/billing/delivery/process', [$documentDelivery, 'processQueue']);
         $router->add('GET', '/api/portal/documents', [$documentDelivery, 'listPortalDocuments']);
         $router->add('GET', '/api/portal/documents/{id}', [$documentDelivery, 'getPortalDocument']);
         $router->add('POST', '/api/billing/delivery/tracking/events', [$documentDelivery, 'trackEvent']);

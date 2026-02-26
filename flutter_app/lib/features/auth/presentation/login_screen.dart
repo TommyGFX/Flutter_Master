@@ -70,7 +70,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             tenant: tenantCtrl.text,
                           );
                       if (context.mounted) {
-                        Navigator.pushReplacementNamed(context, '/dashboard');
+                        final authState = ref.read(authControllerProvider);
+                        final route = authState.entrypoint == 'customer' ? '/portal' : '/dashboard';
+                        Navigator.pushReplacementNamed(context, route);
                       }
                     },
                     child: Text(l10n.signIn),

@@ -77,7 +77,7 @@ final class DocumentDeliveryController
     public function listPortalDocuments(Request $request): void
     {
         $tenantId = $this->tenantId($request);
-        $accountId = $this->accountId($request);
+        $accountId = $this->accountIdentifier($request);
         if ($tenantId === null || $accountId === null) {
             return;
         }
@@ -92,7 +92,7 @@ final class DocumentDeliveryController
     public function getPortalDocument(Request $request, string $documentId): void
     {
         $tenantId = $this->tenantId($request);
-        $accountId = $this->accountId($request);
+        $accountId = $this->accountIdentifier($request);
         if ($tenantId === null || $accountId === null) {
             return;
         }
@@ -132,14 +132,30 @@ final class DocumentDeliveryController
         return trim($tenantId);
     }
 
-    private function accountId(Request $request): ?int
+    public function processQueue(Request $request): void
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === null) {
+            return;
+        }
+
+        $limit = (int) ($request->query('limit') ?? 25);
+
+        try {
+            Response::json(['data' => $this->delivery->processQueue($tenantId, $limit)]);
+        } catch (RuntimeException $exception) {
+            Response::json(['error' => $exception->getMessage()], 422);
+        }
+    }
+
+    private function accountIdentifier(Request $request): ?string
     {
         $userId = $request->header('X-User-Id');
-        if (!is_string($userId) || trim($userId) === '' || !ctype_digit(trim($userId))) {
+        if (!is_string($userId) || trim($userId) === '') {
             Response::json(['error' => 'missing_or_invalid_user_header'], 422);
             return null;
         }
 
-        return (int) trim($userId);
+        return trim($userId);
     }
 }
