@@ -148,3 +148,13 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - **User (Mitarbeiter)** verwaltet Customer vollständig.
   - **Customer** kann nur den eigenen Datensatz lesen und pflegen (Self-Service).
 - `role_id`-Anbindung über bestehende `roles`/`role_permissions` Tabellen integriert (Fallback auf account_type-basierte Rechte).
+
+## Schritt 13 – Frontend UI-Abdeckung für bestehende Backend-Funktionen (abgeschlossen)
+- Admin-Dashboard als zentrales **Control Center** ausgebaut und um zusätzliche Funktionsbereiche erweitert:
+  - Approvals (Laden + Entscheiden)
+  - Platform Insights (Admin-Stats, Audit-Logs, Reports, Impersonation)
+  - Tenant Account-Management (Admin-Users, Customers, Self-Profile)
+  - Integrationsbereich für Stripe/PDF/Email-Endpunkte
+- API-Aufrufe in der UI vereinheitlicht (Tenant-/Permission-/Bearer-Header) zur konsistenten Nutzung aller Backend-Funktionen im Frontend.
+- UI-Design stärker auf Theme-gesteuerte Komponenten umgestellt (Cards, Inputs, Buttons, Chips) gemäß Flutter 3.41 Material-3-Standard.
+- `AppTheme` erweitert, damit visuelle Anpassungen zentral über Theme-Konfiguration erfolgen.
