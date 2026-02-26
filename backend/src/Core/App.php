@@ -10,6 +10,7 @@ use App\Controllers\CrudController;
 use App\Controllers\DocumentController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
+use App\Controllers\PlatformAdminController;
 use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
@@ -40,6 +41,7 @@ final class App
         $stripe = new StripeController(new StripeService());
         $document = new DocumentController(new PdfRendererService(), new TenantMailerService(), new TemplateRendererService());
         $adminPlugins = new AdminPluginController(new RbacService(), new ApprovalService(), new AuditLogService());
+        $platformAdmin = new PlatformAdminController(new JwtService(), new RefreshTokenService(), new AuditLogService());
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -70,6 +72,11 @@ final class App
         $router->add('GET', '/api/admin/approvals', [$adminPlugins, 'listApprovals']);
         $router->add('POST', '/api/admin/approvals/{approvalId}/approve', [$adminPlugins, 'approve']);
         $router->add('POST', '/api/admin/approvals/{approvalId}/reject', [$adminPlugins, 'reject']);
+
+        $router->add('POST', '/api/platform/impersonate/company', [$platformAdmin, 'impersonateCompany']);
+        $router->add('GET', '/api/platform/admin-stats', [$platformAdmin, 'adminStats']);
+        $router->add('GET', '/api/platform/audit-logs', [$platformAdmin, 'globalAuditLogs']);
+        $router->add('GET', '/api/platform/reports', [$platformAdmin, 'platformReports']);
 
         $router->dispatch($request);
     }

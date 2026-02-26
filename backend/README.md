@@ -36,6 +36,10 @@ Kopiere `.env.example` nach `.env` und passe DB/Stripe/SMTP Werte an.
 - `POST /api/stripe/webhook`
 - `POST /api/pdf/render`
 - `POST /api/email/send`
+- `POST /api/platform/impersonate/company`
+- `GET /api/platform/admin-stats`
+- `GET /api/platform/audit-logs`
+- `GET /api/platform/reports`
 
 
 ## Auth Hinweise
@@ -144,3 +148,24 @@ Kritische Änderungen werden nicht direkt angewendet, sondern als Approval-Reque
 Hinweise:
 - Self-Approval ist blockiert (`requested_by !== approved_by`).
 - Die fachliche Änderung (Plugin-Status / Role-Permissions) wird erst bei Approval im selben Tenant ausgeführt.
+
+
+## Plattform-Admin (Superadmin)
+Diese Endpunkte sind **plattformweit** und nur mit gültigem Superadmin-JWT nutzbar.
+
+### Auth
+- Header: `Authorization: Bearer <access_token>`
+- Token muss `is_superadmin=true` enthalten.
+- Erforderliche Permission: entweder `*` oder die spezifische Action (`platform.*`).
+
+### Endpunkte
+- `POST /api/platform/impersonate/company`
+  - Erzeugt Access/Refresh-Token für einen Ziel-Tenant (Company-Impersonation).
+  - Body: `{ "tenant_id": "tenant_123", "user_id": "optional", "permissions": ["*"] }`
+- `GET /api/platform/admin-stats`
+  - Liefert globale Kennzahlen (`tenants_total`, `users_total`, `pending_approvals_total`, etc.).
+- `GET /api/platform/audit-logs`
+  - Globale Audit-Logs mit Pagination (Header `X-Page`, `X-Per-Page`) und Filtern
+    (`X-Audit-Tenant-Id`, `X-Audit-Action`, `X-Audit-Status`).
+- `GET /api/platform/reports`
+  - Erweiterte Analytics je Tenant inkl. Summaries (User, aktive Plugins, offene Approvals, Sessions, Audit-Volumen).

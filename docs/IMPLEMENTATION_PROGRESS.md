@@ -125,3 +125,14 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Self-Approval blockiert.
   - Tenant-Isolation in allen Approval-/Audit-Queries.
   - RBAC-Permissions getrennt nach Änderungsantrag (`plugins.manage`/`rbac.manage`) und Freigabe (`approvals.manage`).
+
+
+## Schritt 11 – Superadmin Impersonation + Plattformweite Insights (abgeschlossen)
+- Superadmin-Endpunkte für plattformweite Operationen ergänzt:
+  - `POST /api/platform/impersonate/company` (Übernahme eines Company-Tenants via Token-Generierung)
+  - `GET /api/platform/admin-stats` (globale KPI-Snapshot-Statistiken)
+  - `GET /api/platform/audit-logs` (globale Audit-Log Einsicht mit Pagination + Filtern)
+  - `GET /api/platform/reports` (erweiterte Reports/Analytics pro Tenant + Summaries)
+- JWT-basierte Superadmin-Absicherung für die neuen Plattform-Endpunkte umgesetzt (`Authorization: Bearer ...`, `is_superadmin=true`).
+- Auditierbarkeit erweitert: Abruf von Plattform-Stats/Reports und das Erzeugen von Impersonation-Tokens werden selbst als Audit-Events protokolliert.
+- Progress-Dokumentation aktualisiert, um den aktuellen Lieferstand transparent nachvollziehbar zu machen.
