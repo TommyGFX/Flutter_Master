@@ -24,7 +24,7 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - `/api/admin/login`
 - CRUD-Controller mit tenant-sicherem Zugriff.
 - Upload-Endpunkte mit MIME-Prüfung.
-- Stripe Webhook-Endpunkt (Signatur-Header, Event-Dispatch-Skelett).
+- Stripe Checkout Session + Customer Portal Endpunkte sowie Webhook-Verifikation implementiert.
 - Plugin-Manager und Hook-Aufrufe als erweiterbares Fundament.
 
 ## Schritt 3 – Flutter Basis (abgeschlossen)
@@ -38,16 +38,16 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - CRUD-Liste/Editor als Start für Full CRUD.
 - Modernes SaaS Layout (Sidebar/Topbar, mobil optimiert).
 
-## Schritt 4 – Qualität & Übergabe (in Arbeit)
+## Schritt 4 – Qualität & Übergabe (abgeschlossen)
 - Dokumentation ergänzt (`README.md`).
 - Syntaxcheck für PHP ausgeführt.
 - Änderungen versioniert.
 
 ## Nächste Ausbaustufen
 1. Persistente Queue Worker (Redis/MySQL polling).
-2. Komplette Stripe Checkout Session Erstellung + Customer Portal.
-3. PDF Rendering (z. B. Dompdf) und SMTP Versand (z. B. Symfony Mailer).
-4. Plugin-Lifecycle UI + Rechteverwaltung im Admin-Bereich.
+2. PDF Rendering (z. B. Dompdf) und SMTP Versand (z. B. Symfony Mailer).
+3. Plugin-Lifecycle UI + Rechteverwaltung im Admin-Bereich.
+4. Domain-Persistenz für Stripe-Events (Provisionierung, Entitlements, Dunning).
 
 
 ## Schritt 5 – JWT Hardening + Refresh Tokens (abgeschlossen)
@@ -56,3 +56,14 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Neue Auth-Endpunkte ergänzt: `/api/token/refresh`, `/api/logout`.
 - Migration für Tabelle `refresh_tokens` ergänzt (Hash-Speicherung, Revocation, Ablaufzeit).
 - Backend-Doku auf neue Auth-Flows aktualisiert.
+
+
+## Schritt 6 – Stripe Checkout + Customer Portal (abgeschlossen)
+- Composer-Dependency `stripe/stripe-php` integriert.
+- Neue API-Endpunkte ergänzt:
+  - `/api/stripe/checkout-session`
+  - `/api/stripe/customer-portal`
+- Checkout Session Erstellung mit Validierung für `line_items`, `mode` und konfigurierbaren Redirect-URLs.
+- Customer Portal Session Erstellung mit `customer_id` und konfigurierbarer Return-URL.
+- Webhook-Verifikation über `STRIPE_WEBHOOK_SECRET` umgesetzt (falls gesetzt).
+- Event-Handling Struktur für `checkout.session.completed` und Subscription-Lifecycle vorbereitet.
