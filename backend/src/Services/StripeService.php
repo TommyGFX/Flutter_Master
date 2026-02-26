@@ -17,12 +17,11 @@ use Stripe\Webhook;
 
 final class StripeService
 {
-    private PDO $pdo;
+    private ?PDO $pdo = null;
 
     public function __construct()
     {
         Stripe::setApiKey($this->getRequiredEnv('STRIPE_SECRET_KEY'));
-        $this->pdo = Database::connection();
     }
 
     public function createCheckoutSession(array $payload): array
@@ -146,7 +145,7 @@ final class StripeService
             return;
         }
 
-        $statement = $this->pdo->prepare('INSERT INTO tenant_provisioning_events (tenant_id, stripe_event_pk, stripe_session_id, stripe_customer_id, provisioning_status, payload_json)
+        $statement = $this->pdo()->prepare('INSERT INTO tenant_provisioning_events (tenant_id, stripe_event_pk, stripe_session_id, stripe_customer_id, provisioning_status, payload_json)
             VALUES (:tenant_id, :stripe_event_pk, :stripe_session_id, :stripe_customer_id, :provisioning_status, :payload_json)
             ON DUPLICATE KEY UPDATE
                 stripe_customer_id = VALUES(stripe_customer_id),
@@ -172,7 +171,7 @@ final class StripeService
             return;
         }
 
-        $statement = $this->pdo->prepare('INSERT INTO tenant_subscription_entitlements
+        $statement = $this->pdo()->prepare('INSERT INTO tenant_subscription_entitlements
             (tenant_id, stripe_event_pk, stripe_subscription_id, entitlement_status, current_period_end, payload_json)
             VALUES (:tenant_id, :stripe_event_pk, :stripe_subscription_id, :entitlement_status, :current_period_end, :payload_json)
             ON DUPLICATE KEY UPDATE
@@ -200,7 +199,7 @@ final class StripeService
 
         $attemptCount = (int) ($resource['attempt_count'] ?? 0);
 
-        $statement = $this->pdo->prepare('INSERT INTO stripe_dunning_cases
+        $statement = $this->pdo()->prepare('INSERT INTO stripe_dunning_cases
             (tenant_id, stripe_event_pk, stripe_invoice_id, dunning_status, attempt_count, next_payment_attempt_at, payload_json)
             VALUES (:tenant_id, :stripe_event_pk, :stripe_invoice_id, :dunning_status, :attempt_count, :next_payment_attempt_at, :payload_json)
             ON DUPLICATE KEY UPDATE
@@ -228,7 +227,7 @@ final class StripeService
             return;
         }
 
-        $statement = $this->pdo->prepare('UPDATE stripe_dunning_cases
+        $statement = $this->pdo()->prepare('UPDATE stripe_dunning_cases
             SET stripe_event_pk = :stripe_event_pk,
                 dunning_status = :dunning_status,
                 resolved_at = CURRENT_TIMESTAMP,
@@ -251,7 +250,7 @@ final class StripeService
             throw new InvalidArgumentException('Stripe-Event enthält keine ID.');
         }
 
-        $statement = $this->pdo->prepare('INSERT INTO stripe_webhook_events
+        $statement = $this->pdo()->prepare('INSERT INTO stripe_webhook_events
             (stripe_event_id, event_type, tenant_id, stripe_customer_id, stripe_subscription_id, event_status, payload_json)
             VALUES (:stripe_event_id, :event_type, :tenant_id, :stripe_customer_id, :stripe_subscription_id, :event_status, :payload_json)');
 
@@ -272,12 +271,12 @@ final class StripeService
             throw $exception;
         }
 
-        return (int) $this->pdo->lastInsertId();
+        return (int) $this->pdo()->lastInsertId();
     }
 
     private function markWebhookProcessed(int $eventPk, string $status, ?string $errorMessage): void
     {
-        $statement = $this->pdo->prepare('UPDATE stripe_webhook_events
+        $statement = $this->pdo()->prepare('UPDATE stripe_webhook_events
             SET event_status = :event_status,
                 error_message = :error_message,
                 processed_at = CURRENT_TIMESTAMP
@@ -317,6 +316,17 @@ final class StripeService
     private function stringOrNull(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private function pdo(): PDO
+    {
+        if ($this->pdo instanceof PDO) {
+            return $this->pdo;
+        }
+
+        $this->pdo = Database::connection();
+
+        return $this->pdo;
     }
 
     private function resolveUrl(mixed $value, string $envKey): string
