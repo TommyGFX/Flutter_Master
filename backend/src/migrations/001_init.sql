@@ -552,3 +552,51 @@ CREATE TABLE IF NOT EXISTS tenant_bank_accounts (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_tenant_bank_account (tenant_id)
 );
+
+CREATE TABLE IF NOT EXISTS tenant_tax_profiles (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    business_name VARCHAR(255) NULL,
+    tax_number VARCHAR(64) NULL,
+    vat_id VARCHAR(64) NULL,
+    small_business_enabled TINYINT(1) NOT NULL DEFAULT 0,
+    default_tax_category VARCHAR(32) NOT NULL DEFAULT 'standard',
+    supply_date_required TINYINT(1) NOT NULL DEFAULT 1,
+    service_date_required TINYINT(1) NOT NULL DEFAULT 0,
+    country_code CHAR(2) NOT NULL DEFAULT 'DE',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenant_tax_profile (tenant_id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_document_compliance (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'tax_compliance_de',
+    is_sealed TINYINT(1) NOT NULL DEFAULT 0,
+    seal_hash CHAR(64) NULL,
+    sealed_at TIMESTAMP NULL,
+    preflight_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    preflight_report_json JSON NULL,
+    correction_of_document_id BIGINT UNSIGNED NULL,
+    correction_reason VARCHAR(512) NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_billing_document_compliance (tenant_id, document_id),
+    INDEX idx_billing_document_compliance_status (tenant_id, preflight_status, is_sealed),
+    CONSTRAINT fk_billing_document_compliance_document FOREIGN KEY (document_id) REFERENCES billing_documents (id),
+    CONSTRAINT fk_billing_document_compliance_correction FOREIGN KEY (correction_of_document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_einvoice_exchange (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NULL,
+    exchange_direction VARCHAR(16) NOT NULL,
+    invoice_format VARCHAR(32) NOT NULL,
+    payload_json JSON NOT NULL,
+    xml_content MEDIUMTEXT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'received',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_einvoice_direction (tenant_id, exchange_direction, invoice_format, created_at),
+    CONSTRAINT fk_billing_einvoice_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
