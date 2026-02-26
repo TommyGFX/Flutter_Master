@@ -25,7 +25,7 @@ Senior-Level Starter für eine **Flutter Web/Android/iOS App** mit **PHP 8.5 Bac
 - Flutter 3 Struktur mit:
   - Material 3
   - Dark Mode
-  - Riverpod 2.6.3
+  - Riverpod 3.2.1
   - Dio 5.9.1
   - Intl 0.20.2
   - ARB (`lib/l10n`)
