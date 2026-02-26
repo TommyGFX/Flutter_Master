@@ -30,6 +30,13 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 
 **Abnahme Phase 0:** Plugins können sauber registriert, aktiviert und in UI/API sichtbar gemacht werden.
 
+
+### Fortschritt (Phase 0 – Abnahmeabsicherung)
+- [x] Plugin-Contract-Metadaten und Lifecycle-Hooks sind über Contract-Tests abgesichert (`backend/tests/Contract/plugin_contract_test.php`).
+- [x] Navigations-Contract für plugin-/RBAC-basierte Sichtbarkeit ist als dedizierter Contract implementiert und getestet (`PluginNavigationContract`).
+- [x] Flutter-Routing besitzt Widget-/Router-Tests, damit unbekannte Routen zuverlässig auf Login zurückfallen.
+- [x] Phase-0-Abnahmekriterium „UI/API sichtbar“ ist testbar dokumentiert (Backend-Contract + Flutter-Widget-Test).
+
 ---
 
 ## Phase 1 – Core: Rechnungen & Dokumente (MVP)
