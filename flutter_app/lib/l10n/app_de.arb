@@ -1,0 +1,15 @@
+{
+  "@@locale": "de",
+  "appTitle": "Flutter Master SaaS",
+  "loginTitle": "Anmeldung",
+  "email": "E-Mail",
+  "password": "Passwort",
+  "tenant": "Tenant",
+  "companyLogin": "Company Login",
+  "employeeLogin": "Mitarbeiter Login",
+  "portalLogin": "Customer Portal Login",
+  "superadminLogin": "Superadmin Login",
+  "dashboard": "Dashboard",
+  "crud": "Datensätze",
+  "save": "Speichern"
+}
