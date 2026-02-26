@@ -251,3 +251,29 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Technische E-Rechnungsfähigkeit (XRechnung/ZUGFeRD) via XML-Export + Import-Journal.
 
 **Abnahme-Status Phase 3:** Die Backend-Basis für Steuer-/Compliance-Workflows ist implementiert; für produktionsreife DE-Konformität folgen als nächste Schritte fachliche Regelverfeinerung je Geschäftsfall sowie Schema-/Validator-Härtung für vollwertige XRechnung/ZUGFeRD-Compliance.
+
+## Schritt 20 – PLUGIN_ROADMAP Phase 4 (Wiederkehrende Umsätze & Abos) umgesetzt (Backend-MVP)
+- Neues Backend-Plugin-Modul **`subscriptions_billing`** ergänzt und in das API-Routing integriert.
+- Persistenz für Abo-Lifecycle und wiederkehrende Abrechnung erweitert:
+  - `subscription_plans` (Planmodell mit Laufzeit, Verlängerung, Kündigungsfrist)
+  - `subscription_contracts` (Vertragszustand inkl. Terminen, Kündigungs-/Payment-Method-Daten)
+  - `subscription_cycles` (Recurring-/Planwechsel-Events inkl. Proration-Metadaten)
+  - `subscription_invoices` (Auto-Invoicing-Zuordnung auf Billing-Dokumente inkl. Collection-/Delivery-Status)
+  - `subscription_dunning_cases`, `subscription_payment_method_updates` (Retry-/Retention- und Payment-Method-Update-Flow)
+- Neue API-Endpunkte für Phase-4-Workflows ergänzt:
+  - Pläne: `GET|POST /api/billing/subscriptions/plans`
+  - Verträge: `GET|POST /api/billing/subscriptions/contracts`, `PUT /api/billing/subscriptions/contracts/{id}`
+  - Planwechsel/Proration: `POST /api/billing/subscriptions/contracts/{id}/change-plan`
+  - Recurring Engine: `POST /api/billing/subscriptions/run-recurring`
+  - Auto-Invoicing + Versandqueue: `POST /api/billing/subscriptions/auto-invoicing/run`
+  - Dunning/Retention: `POST /api/billing/subscriptions/dunning/run`
+  - Payment-Method-Update-Link: `POST /api/billing/subscriptions/contracts/{id}/payment-method-update-link`
+- Fachlogik in `SubscriptionsBillingService` implementiert:
+  - Plan-/Vertragsverwaltung mit Tenant-Isolation und Validierungen.
+  - Recurring Engine für monatliche/jährliche Zyklen.
+  - Proration-Credit bei Upgrade/Downgrade über Restlaufzeit-Anteil.
+  - Automatische Rechnungserzeugung als `billing_documents` + `billing_line_items` mit Plugin-Key `subscriptions_billing`.
+  - Auto-Invoicing-Dispatch in die vorhandene `email_queue`.
+  - Retry-Logik bis max. 3 Versuche mit Eskalation in Payment-Method-Update-Flow.
+
+**Abnahme-Status Phase 4:** Der Abo-Cashflow ist als Backend-MVP umgesetzt (Plan/Vertrag -> Recurring Invoice -> Versandqueue -> Retry/Retention). Als nächster Schritt folgen Provider-spezifische Payment-Method-Update-Completion Hooks und UI-Flows im Flutter-Admin.

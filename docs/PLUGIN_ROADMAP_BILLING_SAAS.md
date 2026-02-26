@@ -256,7 +256,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 | 1 | Rechnungen & Dokumente | In Umsetzung (MVP-Backend implementiert) | Flutter Billing UI + E2E-Flow (Angebot -> bezahlt) vervollständigen |
 | 2 | Payments & Mahnwesen | Geplant | Payment-Provider-Abstraktion definieren |
 | 3 | Tax & Compliance | In Umsetzung (Backend-Basis implementiert) | Preflight-Regeln pro Dokumenttyp fachlich schärfen + XRechnung/ZUGFeRD-Validator ergänzen |
-| 4 | Abos | Geplant | Subscription Domainmodell definieren |
+| 4 | Abos | In Umsetzung (Backend-MVP implementiert) | Provider-Adapter + Flutter Abo-Management-UI ergänzen |
 | 5 | E-Mail & Versand | Geplant | Template-Engine Variablenkatalog |
 | 6 | Reporting | Geplant | KPI-Datenquellen standardisieren |
 | 7 | Team & Rechte | Teilweise vorhanden | Rollen auf Plugin-Capabilities mappen |
