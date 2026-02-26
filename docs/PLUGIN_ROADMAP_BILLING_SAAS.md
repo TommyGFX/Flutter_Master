@@ -71,15 +71,8 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 
 ## Phase 2 – Payments & Mahnwesen (MVP+)
 ### Plugin: `billing_payments`
-### Schritt 2.1 – Zahlungslinks
-- Online-Payment abstrakt modellieren (`provider`, `payment_link_id`, `status`).
-- Stripe zuerst, PayPal als optionales Adapter-Plugin.
-
 ### Schritt 2.2 – Zahlungseingänge
 - Voll/Teilzahlungen, Gebühren, Skonto und Restforderung.
-
-### Schritt 2.3 – Mahnlogik
-- Fälligkeitserinnerung + 1./2./3. Mahnung als konfigurierbarer Workflow.
 
 ### Schritt 2.4 – Gebühren & Verzugszinsen
 - Konfigurierbare Regeln pro Tenant (Mahngebühr, Zinssatz, Karenzzeit).
@@ -89,7 +82,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 
 **Abnahme Phase 2:** Automatisierter Forderungsprozess von Fälligkeit bis Mahnstufe.
 
-_Status-Update (Implementierung):_ Payment-Provider-Abstraktion via Adapter-Pattern (Stripe/PayPal) sowie Mahnstufen-Regression (Tagesdrossel je Fall + automatisierter Regressionstest) sind umgesetzt.
+_Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter-Pattern (Stripe/PayPal) sowie Mahnlogik inkl. Tagesdrossel je Fall und automatisiertem Regressionstest sind umgesetzt. Offene MVP+-Punkte in Phase 2: Zahlungseingänge, Gebühren-/Verzugszinsregeln und Bank-/SEPA-Infos.
 
 ---
 
@@ -255,7 +248,7 @@ _Status-Update (Implementierung):_ Payment-Provider-Abstraktion via Adapter-Patt
 |---|---|---|---|
 | 0 | Plugin-Fundament | **Abgeschlossen** | Kein offener Backlog-Eintrag (erledigte Punkte aus der Aktionsliste entfernt) |
 | 1 | Rechnungen & Dokumente | **Abgeschlossen** (Abnahme via E2E-Flow inkl. Nummernkreis/Mehrwährung/PDF-Export dokumentiert) | Phase 2 End-to-End mit Payment-Provider-Adapter (Stripe/PayPal) + Mahnstufen-Regression absichern |
-| 2 | Payments & Mahnwesen | Geplant | Payment-Provider-Abstraktion definieren |
+| 2 | Payments & Mahnwesen | In Umsetzung (Zahlungslink-Adapter + Mahnlogik abgeschlossen) | Zahlungseingänge inkl. Teilzahlungen/Skonto modellieren und Gebühren-/Verzugszinsregeln pro Tenant finalisieren |
 | 3 | Tax & Compliance | In Umsetzung (Backend-Basis implementiert) | Preflight-Regeln pro Dokumenttyp fachlich schärfen + XRechnung/ZUGFeRD-Validator ergänzen |
 | 4 | Abos | In Umsetzung (Backend-MVP implementiert) | Provider-Adapter + Flutter Abo-Management-UI ergänzen |
 | 5 | E-Mail & Versand | In Umsetzung (Backend-MVP implementiert) | Delivery-Worker + Portal-UI-Flow vervollständigen |
