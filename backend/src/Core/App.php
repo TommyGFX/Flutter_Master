@@ -10,6 +10,7 @@ use App\Controllers\CrudController;
 use App\Controllers\DocumentController;
 use App\Controllers\BillingCoreController;
 use App\Controllers\BillingPaymentsController;
+use App\Controllers\TaxComplianceDeController;
 use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
@@ -21,6 +22,7 @@ use App\Services\RefreshTokenService;
 use App\Services\ApprovalService;
 use App\Services\BillingCoreService;
 use App\Services\BillingPaymentsService;
+use App\Services\TaxComplianceDeService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
@@ -52,6 +54,7 @@ final class App
         $pluginFoundation = new PluginFoundationController(new RbacService());
         $billingCore = new BillingCoreController(new BillingCoreService(Database::connection()), new PdfRendererService());
         $billingPayments = new BillingPaymentsController(new BillingPaymentsService(Database::connection()));
+        $taxComplianceDe = new TaxComplianceDeController(new TaxComplianceDeService(Database::connection(), new BillingCoreService(Database::connection())));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -129,6 +132,14 @@ final class App
 
         $router->add('GET', '/api/billing/bank-account', [$billingPayments, 'getBankAccount']);
         $router->add('PUT', '/api/billing/bank-account', [$billingPayments, 'saveBankAccount']);
+
+        $router->add('GET', '/api/billing/tax-compliance/config', [$taxComplianceDe, 'getConfig']);
+        $router->add('PUT', '/api/billing/tax-compliance/config', [$taxComplianceDe, 'saveConfig']);
+        $router->add('POST', '/api/billing/tax-compliance/documents/{id}/preflight', [$taxComplianceDe, 'preflight']);
+        $router->add('POST', '/api/billing/tax-compliance/documents/{id}/seal', [$taxComplianceDe, 'seal']);
+        $router->add('POST', '/api/billing/tax-compliance/documents/{id}/correction', [$taxComplianceDe, 'createCorrection']);
+        $router->add('GET', '/api/billing/tax-compliance/documents/{id}/e-invoice/export', [$taxComplianceDe, 'exportEInvoice']);
+        $router->add('POST', '/api/billing/tax-compliance/e-invoice/import', [$taxComplianceDe, 'importEInvoice']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);

@@ -229,3 +229,25 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 
 **Abnahme-Status Phase 2:** Der Forderungsprozess ist als MVP+ technisch abgedeckt: von Zahlungslink über Teil-/Vollzahlung bis zur automatisierten Mahnstufe mit tenant-spezifischen Regeln und Bank-/SEPA-Stammdaten.
 
+
+## Schritt 19 – PLUGIN_ROADMAP Phase 3 (Steuern & Compliance DACH/DE) gestartet (Backend-Basis umgesetzt)
+- Neues Backend-Plugin-Modul **`tax_compliance_de`** als fachliche Compliance-Schicht auf bestehendem Billing-Core ergänzt.
+- Persistenz für steuerliche Konfiguration, Compliance-Status und E-Rechnungs-Austausch erweitert:
+  - `tenant_tax_profiles` (Steuerprofil je Tenant inkl. §19-Kleinunternehmer-Flag)
+  - `billing_document_compliance` (Preflight-Status, Siegel-Hash, Korrekturbeleg-Referenz)
+  - `billing_einvoice_exchange` (Export/Import-Protokoll für XRechnung/ZUGFeRD)
+- Neue API-Endpunkte für Phase-3-Workflows ergänzt:
+  - `GET|PUT /api/billing/tax-compliance/config`
+  - `POST /api/billing/tax-compliance/documents/{id}/preflight`
+  - `POST /api/billing/tax-compliance/documents/{id}/seal`
+  - `POST /api/billing/tax-compliance/documents/{id}/correction`
+  - `GET /api/billing/tax-compliance/documents/{id}/e-invoice/export?format=xrechnung|zugferd`
+  - `POST /api/billing/tax-compliance/e-invoice/import`
+- Fachlogik in `TaxComplianceDeService` implementiert:
+  - USt-Regelklassifizierung (standard/ermäßigt/0%/EU-Indikatoren) als Preflight-Basis.
+  - §19-Kleinunternehmerregel: Validierung verhindert USt-Ausweis bei aktivierter Regelung.
+  - Pflichtangaben-Preflight vor Finalisierung/Versiegelung (Steuerprofil + Positions-/Datumschecks).
+  - GoBD-nahe Versiegelung über deterministischen SHA-256-Dokument-Hash und Korrekturbeleg-Flow.
+  - Technische E-Rechnungsfähigkeit (XRechnung/ZUGFeRD) via XML-Export + Import-Journal.
+
+**Abnahme-Status Phase 3:** Die Backend-Basis für Steuer-/Compliance-Workflows ist implementiert; für produktionsreife DE-Konformität folgen als nächste Schritte fachliche Regelverfeinerung je Geschäftsfall sowie Schema-/Validator-Härtung für vollwertige XRechnung/ZUGFeRD-Compliance.

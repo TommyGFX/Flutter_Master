@@ -255,7 +255,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 | 0 | Plugin-Fundament | Geplant | Plugin-SDK Contract schriftlich fixieren |
 | 1 | Rechnungen & Dokumente | In Umsetzung (MVP-Backend implementiert) | Flutter Billing UI + E2E-Flow (Angebot -> bezahlt) vervollständigen |
 | 2 | Payments & Mahnwesen | Geplant | Payment-Provider-Abstraktion definieren |
-| 3 | Tax & Compliance | Geplant | USt-Regelmatrix DE/EU abbilden |
+| 3 | Tax & Compliance | In Umsetzung (Backend-Basis implementiert) | Preflight-Regeln pro Dokumenttyp fachlich schärfen + XRechnung/ZUGFeRD-Validator ergänzen |
 | 4 | Abos | Geplant | Subscription Domainmodell definieren |
 | 5 | E-Mail & Versand | Geplant | Template-Engine Variablenkatalog |
 | 6 | Reporting | Geplant | KPI-Datenquellen standardisieren |
