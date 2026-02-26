@@ -476,6 +476,7 @@ CREATE TABLE IF NOT EXISTS billing_payment_links (
     payment_link_id VARCHAR(191) NOT NULL,
     payment_url VARCHAR(512) NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'open',
+    provider_response_json JSON NULL,
     amount DECIMAL(18,2) NOT NULL,
     currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
     expires_at TIMESTAMP NULL,

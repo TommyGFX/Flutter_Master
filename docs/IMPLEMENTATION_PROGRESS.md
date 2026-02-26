@@ -646,3 +646,15 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Regressionstest ergänzt: `backend/tests/Regression/account_management_superadmin_regression_test.php` validiert den Superadmin-Bypass deterministisch.
 
 **Abnahme-Status Schritt 35:** Der gemeldete 422-Fehler (`missing_user_header`) ist für den Superadmin-Admin-Flow technisch adressiert; Header-Propagation und Backend-Authorisierungspfad sind regressionsgesichert.
+
+## Schritt 36 – Phase 2 End-to-End nachgezogen (Provider-Adapter + Mahnstufen-Regression)
+- Payment-Link-Persistenz im Plugin `billing_payments` auf echten Adapter-Output erweitert:
+  - `provider_response_json` wird für Stripe- und PayPal-Linkerzeugung jetzt vollständig gespeichert und im Listing ausgeliefert.
+  - Damit bleiben provider-spezifische Rohantworten tenant-sicher für Audit/Support verfügbar.
+- Migrationsschema von `billing_payment_links` um `provider_response_json` ergänzt, damit Adapter-Contracts und Persistenz konsistent sind.
+- Phase-2-Regressionstest (`backend/tests/Regression/billing_payments_phase2_regression_test.php`) um End-to-End-Pfade erweitert:
+  - Service-seitige Stripe-/PayPal-Linkerzeugung gegen persistente Datenhaltung,
+  - Validierung der gespeicherten Provider-Rohantwort,
+  - bestehende Mahnstufen-Tagesdrossel-/Zins-/Payment-Kind-Checks bleiben aktiv.
+
+**Abnahme-Status Schritt 36:** Phase-2-Flow ist End-to-End (Adapter -> Service -> Persistenz -> Read-Model) vervollständigt; Mahnstufen-Regression bleibt abgesichert.
