@@ -268,9 +268,15 @@ final class TaxComplianceDeService
             'document_id' => $documentId,
             'document_number' => $document['document_number'] ?? null,
             'issue_date' => isset($document['finalized_at']) && is_string($document['finalized_at']) ? substr($document['finalized_at'], 0, 10) : gmdate('Y-m-d'),
+            'due_date' => $document['due_date'] ?? null,
             'currency' => $document['currency_code'] ?? 'EUR',
             'grand_total' => $document['grand_total'] ?? 0,
-            'customer' => $document['customer_name_snapshot'] ?? null,
+            'seller_name' => $taxConfig['business_name'] ?? null,
+            'seller_tax_number' => $taxConfig['tax_number'] ?? null,
+            'seller_vat_id' => $taxConfig['vat_id'] ?? null,
+            'buyer_name' => $document['customer_name_snapshot'] ?? null,
+            'buyer_reference' => $this->buildBuyerReference($document),
+            'buyer_address' => $this->extractPrimaryBuyerAddress($document),
             'customer_country' => $this->detectCustomerCountryCode($document),
             'line_items' => $document['line_items'] ?? [],
             'tax_breakdown' => $document['tax_breakdown'] ?? [],
@@ -410,12 +416,33 @@ final class TaxComplianceDeService
             $errors[] = 'missing_tax_categories';
         }
 
+        $sellerName = trim((string) $xpath->evaluate('string(/eInvoice/seller/name)'));
+        if ($sellerName === '') {
+            $errors[] = 'missing_seller_name';
+        }
+
+        $sellerTaxNumber = trim((string) $xpath->evaluate('string(/eInvoice/seller/taxNumber)'));
+        $sellerVatId = trim((string) $xpath->evaluate('string(/eInvoice/seller/vatId)'));
+        if ($sellerTaxNumber === '' && $sellerVatId === '') {
+            $errors[] = 'missing_seller_tax_identifier';
+        }
+
+        $buyerName = trim((string) $xpath->evaluate('string(/eInvoice/buyer/name)'));
+        if ($buyerName === '') {
+            $errors[] = 'missing_buyer_name';
+        }
+
+        $buyerCountry = strtoupper(trim((string) $xpath->evaluate('string(/eInvoice/buyer/address/country)')));
+        if (!preg_match('/^[A-Z]{2}$/', $buyerCountry)) {
+            $errors[] = 'missing_buyer_country';
+        }
+
         if ($normalizedFormat === 'xrechnung') {
             if (trim((string) $xpath->evaluate('string(/eInvoice/specificationIdentifier)')) !== 'urn:cen.eu:en16931:2017#compliant#xrechnung_3.0') {
                 $errors[] = 'missing_xrechnung_specification_identifier';
             }
             if (trim((string) $xpath->evaluate('string(/eInvoice/buyerReference)')) === '') {
-                $warnings[] = 'missing_xrechnung_buyer_reference';
+                $errors[] = 'missing_xrechnung_buyer_reference';
             }
         }
 
@@ -575,11 +602,25 @@ final class TaxComplianceDeService
             sprintf('  <format>%s</format>', htmlspecialchars((string) ($payload['format'] ?? ''), ENT_QUOTES, 'UTF-8')),
             sprintf('  <documentNumber>%s</documentNumber>', htmlspecialchars((string) ($payload['document_number'] ?? ''), ENT_QUOTES, 'UTF-8')),
             sprintf('  <issueDate>%s</issueDate>', htmlspecialchars((string) ($payload['issue_date'] ?? gmdate('Y-m-d')), ENT_QUOTES, 'UTF-8')),
+            sprintf('  <dueDate>%s</dueDate>', htmlspecialchars((string) ($payload['due_date'] ?? ''), ENT_QUOTES, 'UTF-8')),
             sprintf('  <currency>%s</currency>', htmlspecialchars((string) ($payload['currency'] ?? 'EUR'), ENT_QUOTES, 'UTF-8')),
             sprintf('  <grandTotal>%.2f</grandTotal>', (float) ($payload['grand_total'] ?? 0.0)),
             sprintf('  <specificationIdentifier>%s</specificationIdentifier>', htmlspecialchars((string) ($payload['format'] ?? '') === 'xrechnung' ? 'urn:cen.eu:en16931:2017#compliant#xrechnung_3.0' : '', ENT_QUOTES, 'UTF-8')),
-            sprintf('  <buyerReference>%s</buyerReference>', htmlspecialchars((string) ($payload['customer'] ?? ''), ENT_QUOTES, 'UTF-8')),
-            sprintf('  <buyerCountry>%s</buyerCountry>', htmlspecialchars((string) ($payload['customer_country'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            sprintf('  <buyerReference>%s</buyerReference>', htmlspecialchars((string) ($payload['buyer_reference'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            '  <seller>',
+            sprintf('    <name>%s</name>', htmlspecialchars((string) ($payload['seller_name'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            sprintf('    <taxNumber>%s</taxNumber>', htmlspecialchars((string) ($payload['seller_tax_number'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            sprintf('    <vatId>%s</vatId>', htmlspecialchars((string) ($payload['seller_vat_id'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            '  </seller>',
+            '  <buyer>',
+            sprintf('    <name>%s</name>', htmlspecialchars((string) ($payload['buyer_name'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            '    <address>',
+            sprintf('      <street>%s</street>', htmlspecialchars((string) (($payload['buyer_address']['street'] ?? '')), ENT_QUOTES, 'UTF-8')),
+            sprintf('      <postalCode>%s</postalCode>', htmlspecialchars((string) (($payload['buyer_address']['postal_code'] ?? '')), ENT_QUOTES, 'UTF-8')),
+            sprintf('      <city>%s</city>', htmlspecialchars((string) (($payload['buyer_address']['city'] ?? '')), ENT_QUOTES, 'UTF-8')),
+            sprintf('      <country>%s</country>', htmlspecialchars((string) (($payload['buyer_address']['country'] ?? ($payload['customer_country'] ?? ''))), ENT_QUOTES, 'UTF-8')),
+            '    </address>',
+            '  </buyer>',
             sprintf('  <profile>%s</profile>', htmlspecialchars((string) ($payload['format'] ?? '') === 'zugferd' ? 'urn:factur-x.eu:1p0:en16931:comfort' : '', ENT_QUOTES, 'UTF-8')),
             sprintf('  <documentContext>%s</documentContext>', htmlspecialchars((string) ($payload['format'] ?? '') === 'zugferd' ? 'EN16931' : '', ENT_QUOTES, 'UTF-8')),
             '  <lineItems>',
@@ -613,6 +654,17 @@ final class TaxComplianceDeService
 
     private function detectCustomerCountryCode(array $document): ?string
     {
+        $address = $this->extractPrimaryBuyerAddress($document);
+        $country = strtoupper(trim((string) ($address['country'] ?? '')));
+        if ($country !== '') {
+            return $country;
+        }
+
+        return null;
+    }
+
+    private function extractPrimaryBuyerAddress(array $document): array
+    {
         $addresses = is_array($document['addresses'] ?? null) ? $document['addresses'] : [];
         foreach ($addresses as $address) {
             if (!is_array($address)) {
@@ -624,13 +676,35 @@ final class TaxComplianceDeService
                 continue;
             }
 
-            $country = strtoupper(trim((string) ($address['country'] ?? '')));
-            if ($country !== '') {
-                return $country;
-            }
+            return [
+                'street' => trim((string) ($address['street'] ?? '')),
+                'postal_code' => trim((string) ($address['postal_code'] ?? '')),
+                'city' => trim((string) ($address['city'] ?? '')),
+                'country' => strtoupper(trim((string) ($address['country'] ?? ''))),
+            ];
         }
 
-        return null;
+        return [];
+    }
+
+    private function buildBuyerReference(array $document): string
+    {
+        $buyerName = trim((string) ($document['customer_name_snapshot'] ?? ''));
+        $documentNumber = trim((string) ($document['document_number'] ?? ''));
+
+        if ($buyerName === '' && $documentNumber === '') {
+            return '';
+        }
+
+        if ($buyerName === '') {
+            return 'DOC-' . $documentNumber;
+        }
+
+        if ($documentNumber === '') {
+            return $buyerName;
+        }
+
+        return $buyerName . ' / ' . $documentNumber;
     }
 
     private function nullableString(mixed $value): ?string

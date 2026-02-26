@@ -182,6 +182,11 @@ $export = $service->exportEInvoice($tenantId, $validInvoiceId, 'xrechnung');
 assertTrue(($export['validation']['valid'] ?? false) === true, 'XRechnung export should pass XML validator.');
 assertSame('xrechnung', $export['format'], 'Export should keep requested format.');
 
+$exportXml = base64_decode((string) ($export['content_base64'] ?? ''), true);
+assertTrue(is_string($exportXml) && str_contains($exportXml, '<seller>'), 'XRechnung export should map seller block for productive profiles.');
+assertTrue(is_string($exportXml) && str_contains($exportXml, '<buyer>'), 'XRechnung export should map buyer block for productive profiles.');
+assertTrue(is_string($exportXml) && str_contains($exportXml, '<buyerReference>Acme GmbH / INV-2</buyerReference>'), 'XRechnung export should map deterministic buyer reference.');
+
 $importValid = $service->importEInvoice($tenantId, ['format' => 'zugferd', 'xml_content' => base64_decode($service->exportEInvoice($tenantId, $validInvoiceId, 'zugferd')['content_base64'], true)]);
 assertSame('validated', $importValid['status'], 'ZUGFeRD import should be validated.');
 

@@ -525,3 +525,19 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Bestehende Preflight-/Import-/Export-Regressionspfade bleiben abgesichert.
 
 **Abnahme-Status Schritt 32:** Die in der Roadmap benannten Phase-3-Tiefenregeln sind backendseitig implementiert und durch Regressionstests gegen Sonderfall-/Validator-Risiken gehärtet.
+
+## Schritt 33 – PLUGIN_ROADMAP Phase 3: Externe Referenzvalidatoren (CI-Gate) + Pflichtdaten-Mapping vervollständigt
+- `TaxComplianceDeService` für produktionsnähere E-Rechnungsprofile erweitert:
+  - Export-Mapping ergänzt um strukturierte Verkäufer-/Käufer-Pflichtdaten (`seller.name`, `seller.taxNumber|vatId`, `buyer.name`, `buyer.address.*`).
+  - Deterministische `buyerReference`-Ableitung eingeführt (`<Kundenname> / <Belegnummer>`) für belastbare XRechnung-Referenzierung.
+  - XML-Validator verschärft: fehlende Verkäufer-/Käufer-Pflichtdaten führen nun zu Fehlern (`missing_seller_*`, `missing_buyer_*`), `buyerReference` ist für XRechnung Pflichtfehler.
+- Regressionstest `backend/tests/Regression/tax_compliance_phase3_regression_test.php` erweitert:
+  - Prüft explizit das neue Pflichtdaten-Mapping (`<seller>`, `<buyer>`, `<buyerReference>`) im Export.
+- Neuer CI-Gate-Runner `backend/scripts/ci_einvoice_reference_gate.php` ergänzt:
+  - Erstellt referenznahe XRechnung-/ZUGFeRD-Exports aus einer In-Memory-Testdatenbasis.
+  - Führt interne Validator-Prüfung zwingend aus.
+  - Bindet externe Referenzvalidatoren optional per ENV an (`XRECHNUNG_VALIDATOR_URL`, `ZUGFERD_VALIDATOR_URL`) und bricht bei Ablehnung hart ab.
+- GitHub-Workflow `.github/workflows/backend-ci.yml` ergänzt:
+  - Führt Contract-/Regressionstests sowie das neue E-Invoice-CI-Gate als festen Pipeline-Schritt aus.
+
+**Abnahme-Status Schritt 33:** Die in der Roadmap geforderte Anbindung externer Referenzvalidatoren (CI-Gate) ist technisch verdrahtet, und das Pflichtdaten-Mapping für produktive XRechnung/ZUGFeRD-Profile wurde backendseitig vervollständigt.

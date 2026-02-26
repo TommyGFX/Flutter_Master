@@ -233,3 +233,11 @@ Hinweise:
 - Alle Endpunkte sind tenant-spezifisch und erwarten `X-Tenant-Id`.
 - DSGVO-Workflows sind als auditable Requests angelegt (`platform_security_data_exports`, `platform_security_deletion_requests`).
 - Backup/Restore und Archivierung sind als MVP synchron als `completed` hinterlegt und können auf Worker-Betrieb erweitert werden.
+
+## E-Rechnung Referenzvalidatoren (CI-Gate, Roadmap Phase 3)
+- Script: `php scripts/ci_einvoice_reference_gate.php`
+- Zweck: Exportiert XRechnung/ZUGFeRD aus einem referenznahen Testfall und validiert die XMLs.
+- Externe Validatoren können in CI per ENV angebunden werden:
+  - `XRECHNUNG_VALIDATOR_URL`
+  - `ZUGFERD_VALIDATOR_URL`
+- Wenn ENV-Variablen nicht gesetzt sind, läuft der interne Gate-Check weiter und externe Prüfungen werden als `skipped` protokolliert.
