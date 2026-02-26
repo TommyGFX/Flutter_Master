@@ -473,3 +473,20 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Stripe-/PayPal-Adapter-Mapping, Registry-Fehlerpfad und Mahnstufen-Tagesdrossel werden automatisiert validiert.
 
 **Abnahme-Status Phase 2 (Härtung):** Payment-Provider-Abstraktion ist explizit definiert und Mahnstufen-Läufe sind regressionsgesichert (kein unbeabsichtigtes Mehrfach-Eskalieren am selben Tag).
+
+## Schritt 31 – PLUGIN_ROADMAP Phase 2 abgeschlossen (Zahlungseingänge/Skonto + tenant-spezifische Gebühren-/Verzugszinsregeln)
+- `billing_payments` fachlich erweitert, um Zahlungseingänge explizit zu modellieren:
+  - Persistenzfelder für `payment_kind` (`partial|full|overpayment`), `skonto_percent`, `outstanding_before` und `outstanding_after` ergänzt.
+  - Skonto kann nun entweder direkt als `discount_amount` übergeben oder prozentual via `skonto_percent` auf die Restforderung berechnet werden.
+  - Rückgabe der Payment-API enthält den abgeleiteten Zahlungstyp zur klaren Unterscheidung von Teil-/Voll-/Überzahlung.
+- Mahn- und Verzugszinsregeln pro Tenant finalisiert:
+  - Dunning-Konfiguration um `interest_free_days`, `interest_mode` (`flat|daily_pro_rata`) und `max_interest_amount` erweitert.
+  - Validerte Konfigurationsspeicherung inkl. Fehlerpfad für ungültigen `interest_mode`.
+  - Verzugszinsberechnung in eine deterministische Funktion ausgelagert (`calculateDunningInterest`) mit Karenz- und Zinsfreitagen sowie optionalem Zins-Cap.
+- Regressionstest für Phase 2 erweitert (`billing_payments_phase2_regression_test.php`):
+  - Ableitung des Zahlungstyps (partial/full/overpayment).
+  - Verzugszinsberechnung für Flat- und Daily-Pro-Rata-Modus, inklusive Grace-Period und Cap-Verhalten.
+- Roadmap-Dokumentation aktualisiert:
+  - Phase 2 als abgeschlossen markiert und nächster Fokus auf Phase 3 verschoben.
+
+**Abnahme-Status Schritt 31:** Die offenen MVP+-Punkte aus Phase 2 (Zahlungseingänge inkl. Teilzahlungen/Skonto sowie tenant-spezifische Gebühren-/Verzugszinsregeln) sind implementiert, testseitig regressionsgesichert und in der Roadmap als abgeschlossen dokumentiert.

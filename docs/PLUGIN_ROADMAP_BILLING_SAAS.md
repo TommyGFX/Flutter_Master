@@ -82,7 +82,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 
 **Abnahme Phase 2:** Automatisierter Forderungsprozess von Fälligkeit bis Mahnstufe.
 
-_Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter-Pattern (Stripe/PayPal) sowie Mahnlogik inkl. Tagesdrossel je Fall und automatisiertem Regressionstest sind umgesetzt. Offene MVP+-Punkte in Phase 2: Zahlungseingänge, Gebühren-/Verzugszinsregeln und Bank-/SEPA-Infos.
+_Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter-Pattern (Stripe/PayPal) sowie Mahnlogik inkl. Tagesdrossel je Fall und automatisiertem Regressionstest sind umgesetzt. Die MVP+-Punkte Zahlungseingänge (inkl. Teilzahlungen/Skonto), tenant-spezifische Gebühren-/Verzugszinsregeln und Bank-/SEPA-Infos sind backendseitig umgesetzt und regressionsseitig abgesichert.
 
 ---
 
@@ -248,7 +248,7 @@ _Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter
 |---|---|---|---|
 | 0 | Plugin-Fundament | **Abgeschlossen** | Kein offener Backlog-Eintrag (erledigte Punkte aus der Aktionsliste entfernt) |
 | 1 | Rechnungen & Dokumente | **Abgeschlossen** (Abnahme via E2E-Flow inkl. Nummernkreis/Mehrwährung/PDF-Export dokumentiert) | Phase 2 End-to-End mit Payment-Provider-Adapter (Stripe/PayPal) + Mahnstufen-Regression absichern |
-| 2 | Payments & Mahnwesen | In Umsetzung (Zahlungslink-Adapter + Mahnlogik abgeschlossen) | Zahlungseingänge inkl. Teilzahlungen/Skonto modellieren und Gebühren-/Verzugszinsregeln pro Tenant finalisieren |
+| 2 | Payments & Mahnwesen | **Abgeschlossen** (Zahlungseingänge inkl. Teilzahlungen/Skonto, tenant-spezifische Gebühren-/Verzugszinsregeln und Bank-/SEPA-Infos umgesetzt) | Phase 3 Preflight-Regeln pro Dokumenttyp + XRechnung/ZUGFeRD-Validator ergänzen |
 | 3 | Tax & Compliance | In Umsetzung (Backend-Basis implementiert) | Preflight-Regeln pro Dokumenttyp fachlich schärfen + XRechnung/ZUGFeRD-Validator ergänzen |
 | 4 | Abos | In Umsetzung (Backend-MVP implementiert) | Provider-Adapter + Flutter Abo-Management-UI ergänzen |
 | 5 | E-Mail & Versand | In Umsetzung (Backend-MVP implementiert) | Delivery-Worker + Portal-UI-Flow vervollständigen |

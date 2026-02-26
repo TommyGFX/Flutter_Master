@@ -77,4 +77,20 @@ assertTrue($service->isDunningEscalationDue(null), 'Dunning escalation should be
 assertTrue(!$service->isDunningEscalationDue(['last_notice_at' => date('Y-m-d') . ' 08:00:00']), 'Dunning escalation should be throttled on the same day.');
 assertTrue($service->isDunningEscalationDue(['last_notice_at' => date('Y-m-d', strtotime('-1 day')) . ' 23:59:59']), 'Dunning escalation should be due on next day.');
 
+assertSame('partial', $service->derivePaymentKind(50.0, 120.0), 'Partial settlement kind should be derived.');
+assertSame('full', $service->derivePaymentKind(120.0, 120.0), 'Full settlement kind should be derived.');
+assertSame('overpayment', $service->derivePaymentKind(130.0, 120.0), 'Overpayment kind should be derived.');
+
+$flatInterest = $service->calculateDunningInterest(1000.0, date('Y-m-d', strtotime('-20 days')), 5.0, 3, 0, 'flat', 0.0);
+assertSame(50.0, $flatInterest, 'Flat interest should be 5% of outstanding amount.');
+
+$dailyInterest = $service->calculateDunningInterest(1000.0, date('Y-m-d', strtotime('-20 days')), 7.3, 3, 5, 'daily_pro_rata', 0.0);
+assertTrue($dailyInterest > 2.3 && $dailyInterest < 2.5, 'Daily pro-rata interest should use overdue days after grace and free days.');
+
+$cappedInterest = $service->calculateDunningInterest(1000.0, date('Y-m-d', strtotime('-50 days')), 20.0, 0, 0, 'flat', 30.0);
+assertSame(30.0, $cappedInterest, 'Interest cap should limit computed interest.');
+
+$noInterestWithinGrace = $service->calculateDunningInterest(1000.0, date('Y-m-d', strtotime('-2 days')), 7.3, 3, 0, 'daily_pro_rata', 0.0);
+assertSame(0.0, $noInterestWithinGrace, 'No interest should accrue within grace period.');
+
 echo "Billing payments Phase-2 regression checks passed\n";

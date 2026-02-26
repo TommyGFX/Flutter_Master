@@ -90,9 +90,21 @@ final class BillingPaymentsService
         $this->pdo->beginTransaction();
 
         try {
+            $summaryBefore = $this->paymentSummary($tenantId, $documentId, (float) $document['grand_total']);
+            $outstandingBefore = max(0.0, (float) $summaryBefore['outstanding_amount']);
+
+            $skontoPercent = $this->normalizeMoney($payload['skonto_percent'] ?? 0);
+            if ($discountAmount <= 0.0 && $skontoPercent > 0.0) {
+                $discountAmount = round($outstandingBefore * ($skontoPercent / 100), 2);
+            }
+
+            $effectiveContribution = $amountPaid + $discountAmount - $feeAmount;
+            $paymentKind = $this->derivePaymentKind($effectiveContribution, $outstandingBefore);
+            $outstandingAfter = round(max(0.0, $outstandingBefore - $effectiveContribution), 2);
+
             $stmt = $this->pdo->prepare(
-                'INSERT INTO billing_payments (tenant_id, document_id, provider, external_payment_id, status, amount_paid, fee_amount, discount_amount, notes, paid_at)
-                 VALUES (:tenant_id, :document_id, :provider, :external_payment_id, :status, :amount_paid, :fee_amount, :discount_amount, :notes, :paid_at)'
+                'INSERT INTO billing_payments (tenant_id, document_id, provider, external_payment_id, status, payment_kind, amount_paid, fee_amount, discount_amount, skonto_percent, outstanding_before, outstanding_after, notes, paid_at)
+                 VALUES (:tenant_id, :document_id, :provider, :external_payment_id, :status, :payment_kind, :amount_paid, :fee_amount, :discount_amount, :skonto_percent, :outstanding_before, :outstanding_after, :notes, :paid_at)'
             );
             $stmt->execute([
                 ':tenant_id' => $tenantId,
@@ -100,9 +112,13 @@ final class BillingPaymentsService
                 ':provider' => $provider,
                 ':external_payment_id' => $this->nullableString($payload['external_payment_id'] ?? null),
                 ':status' => $paymentStatus,
+                ':payment_kind' => $paymentKind,
                 ':amount_paid' => $amountPaid,
                 ':fee_amount' => $feeAmount,
                 ':discount_amount' => $discountAmount,
+                ':skonto_percent' => $skontoPercent,
+                ':outstanding_before' => $outstandingBefore,
+                ':outstanding_after' => $outstandingAfter,
                 ':notes' => $this->nullableString($payload['notes'] ?? null),
                 ':paid_at' => $this->nullableString($payload['paid_at'] ?? null),
             ]);
@@ -126,6 +142,7 @@ final class BillingPaymentsService
             return [
                 'document_id' => $documentId,
                 'status' => $newStatus,
+                'payment_kind' => $paymentKind,
                 'payment_totals' => $totals,
             ];
         } catch (\Throwable $throwable) {
@@ -162,7 +179,7 @@ final class BillingPaymentsService
     public function listPayments(string $tenantId, int $documentId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, provider, external_payment_id, status, amount_paid, fee_amount, discount_amount, notes, paid_at, created_at
+            'SELECT id, provider, external_payment_id, status, payment_kind, amount_paid, fee_amount, discount_amount, skonto_percent, outstanding_before, outstanding_after, notes, paid_at, created_at
              FROM billing_payments
              WHERE tenant_id = :tenant_id AND document_id = :document_id
              ORDER BY COALESCE(paid_at, created_at) DESC, id DESC'
@@ -175,16 +192,25 @@ final class BillingPaymentsService
     public function saveDunningConfig(string $tenantId, array $payload): array
     {
         $graceDays = max(0, (int) ($payload['grace_days'] ?? 3));
+        $interestFreeDays = max(0, (int) ($payload['interest_free_days'] ?? 0));
+        $interestMode = strtolower(trim((string) ($payload['interest_mode'] ?? 'flat')));
+        if (!in_array($interestMode, ['flat', 'daily_pro_rata'], true)) {
+            throw new RuntimeException('invalid_interest_mode');
+        }
+        $maxInterestAmount = max(0.0, $this->normalizeMoney($payload['max_interest_amount'] ?? 0));
         $interestRate = $this->normalizeMoney($payload['interest_rate_percent'] ?? 5);
         $feeLevel1 = $this->normalizeMoney($payload['fee_level_1'] ?? 2.5);
         $feeLevel2 = $this->normalizeMoney($payload['fee_level_2'] ?? 5.0);
         $feeLevel3 = $this->normalizeMoney($payload['fee_level_3'] ?? 7.5);
 
         $stmt = $this->pdo->prepare(
-            'INSERT INTO billing_dunning_configs (tenant_id, grace_days, interest_rate_percent, fee_level_1, fee_level_2, fee_level_3)
-             VALUES (:tenant_id, :grace_days, :interest_rate_percent, :fee_level_1, :fee_level_2, :fee_level_3)
+            'INSERT INTO billing_dunning_configs (tenant_id, grace_days, interest_free_days, interest_mode, max_interest_amount, interest_rate_percent, fee_level_1, fee_level_2, fee_level_3)
+             VALUES (:tenant_id, :grace_days, :interest_free_days, :interest_mode, :max_interest_amount, :interest_rate_percent, :fee_level_1, :fee_level_2, :fee_level_3)
              ON DUPLICATE KEY UPDATE
                 grace_days = VALUES(grace_days),
+                interest_free_days = VALUES(interest_free_days),
+                interest_mode = VALUES(interest_mode),
+                max_interest_amount = VALUES(max_interest_amount),
                 interest_rate_percent = VALUES(interest_rate_percent),
                 fee_level_1 = VALUES(fee_level_1),
                 fee_level_2 = VALUES(fee_level_2),
@@ -193,6 +219,9 @@ final class BillingPaymentsService
         $stmt->execute([
             ':tenant_id' => $tenantId,
             ':grace_days' => $graceDays,
+            ':interest_free_days' => $interestFreeDays,
+            ':interest_mode' => $interestMode,
+            ':max_interest_amount' => $maxInterestAmount,
             ':interest_rate_percent' => $interestRate,
             ':fee_level_1' => $feeLevel1,
             ':fee_level_2' => $feeLevel2,
@@ -205,7 +234,7 @@ final class BillingPaymentsService
     public function getDunningConfig(string $tenantId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT grace_days, interest_rate_percent, fee_level_1, fee_level_2, fee_level_3, updated_at
+            'SELECT grace_days, interest_free_days, interest_mode, max_interest_amount, interest_rate_percent, fee_level_1, fee_level_2, fee_level_3, updated_at
              FROM billing_dunning_configs
              WHERE tenant_id = :tenant_id
              LIMIT 1'
@@ -219,6 +248,9 @@ final class BillingPaymentsService
 
         return [
             'grace_days' => 3,
+            'interest_free_days' => 0,
+            'interest_mode' => 'flat',
+            'max_interest_amount' => 0.00,
             'interest_rate_percent' => 5.00,
             'fee_level_1' => 2.50,
             'fee_level_2' => 5.00,
@@ -246,7 +278,15 @@ final class BillingPaymentsService
 
             $nextLevel = min(3, ((int) ($case['current_level'] ?? 0)) + 1);
             $fee = (float) $config['fee_level_' . $nextLevel];
-            $interest = round($summary['outstanding_amount'] * (((float) $config['interest_rate_percent']) / 100), 2);
+            $interest = $this->calculateDunningInterest(
+                $summary['outstanding_amount'],
+                (string) ($document['due_date'] ?? null),
+                (float) $config['interest_rate_percent'],
+                (int) $config['grace_days'],
+                (int) $config['interest_free_days'],
+                (string) $config['interest_mode'],
+                (float) $config['max_interest_amount']
+            );
 
             $this->upsertDunningCase($tenantId, (int) $document['id'], $nextLevel, $summary['outstanding_amount'], $fee, $interest);
             $this->insertDunningEvent($tenantId, (int) $document['id'], $nextLevel, $summary['outstanding_amount'], $fee, $interest);
@@ -412,6 +452,67 @@ final class BillingPaymentsService
         }
 
         return substr($lastNoticeAt, 0, 10) !== date('Y-m-d');
+    }
+
+    public function calculateDunningInterest(
+        float $outstandingAmount,
+        ?string $dueDate,
+        float $interestRatePercent,
+        int $graceDays,
+        int $interestFreeDays,
+        string $interestMode,
+        float $maxInterestAmount
+    ): float {
+        if ($outstandingAmount <= 0.0 || $interestRatePercent <= 0.0) {
+            return 0.0;
+        }
+
+        if ($dueDate === null || trim($dueDate) === '') {
+            return round($outstandingAmount * ($interestRatePercent / 100), 2);
+        }
+
+        $overdueDays = $this->daysOverdue($dueDate) - max(0, $graceDays) - max(0, $interestFreeDays);
+        if ($overdueDays <= 0) {
+            return 0.0;
+        }
+
+        if ($interestMode === 'daily_pro_rata') {
+            $interest = $outstandingAmount * (($interestRatePercent / 100) / 365) * $overdueDays;
+        } else {
+            $interest = $outstandingAmount * ($interestRatePercent / 100);
+        }
+
+        $interest = round($interest, 2);
+        if ($maxInterestAmount > 0.0) {
+            $interest = min($interest, round($maxInterestAmount, 2));
+        }
+
+        return $interest;
+    }
+
+    public function derivePaymentKind(float $effectiveContribution, float $outstandingBefore): string
+    {
+        if ($outstandingBefore <= 0.0) {
+            return 'overpayment';
+        }
+
+        if ($effectiveContribution >= $outstandingBefore) {
+            return $effectiveContribution > $outstandingBefore ? 'overpayment' : 'full';
+        }
+
+        return 'partial';
+    }
+
+    private function daysOverdue(string $dueDate): int
+    {
+        $ts = strtotime(substr($dueDate, 0, 10));
+        if ($ts === false) {
+            return 0;
+        }
+
+        $days = (int) floor((time() - $ts) / 86400);
+
+        return max(0, $days);
     }
 
     private function normalizeMoney(mixed $value): float
