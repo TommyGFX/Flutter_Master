@@ -704,3 +704,15 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Deckt Datei-Streaming (Header/Rows) und Connector-Sync-Failurepfad (fehlende Webhook-URL) inkl. Statuspersistenz ab.
 
 **Abnahme-Status Schritt 39:** Der konkrete Phase-6-Backlogpunkt „Connector-Synchronisation + DATEV/Excel-Datei-Streaming produktiv härten“ ist umgesetzt und regressionsseitig abgesichert; für die finale Produktionsabnahme fehlen nur noch reale Provider-Sandbox-Tests (Lexoffice/SevDesk/FastBill) mit tenant-spezifischen Secrets/Endpoints.
+
+## Schritt 26 – PLUGIN_ROADMAP Phase 7 erweitert: Rollen auf Plugin-Capabilities mappen
+- `OrgManagementService` um ein tenant-spezifisches Rollen-Capability-Mapping erweitert (`listRoleCapabilityMap`):
+  - Konsolidiert je Rolle die effektiven Permissions aus `roles`/`role_permissions`.
+  - Mapped nur **aktive + enabled** Plugins aus `tenant_plugins` auf die Rolle.
+  - Berücksichtigt `required_permissions_json` je Plugin (inkl. Wildcard `*`) und liefert resultierende `plugin_capabilities` je Rolle.
+- Neuer API-Endpunkt im Org-Management ergänzt:
+  - `GET /api/org/roles/capabilities` (RBAC: `rbac.manage`) für die UI-Matrix „Rolle -> Plugin -> Capabilities“.
+- Regressionstest ergänzt:
+  - `backend/tests/Regression/org_management_role_capability_map_regression_test.php` prüft Rollenmatrix für `admin`, `buchhaltung`, `readonly` inkl. Filterung inaktiver Plugins.
+
+**Fortschrittsstatus Phase 7:** Das Rollenmodell ist nun an Plugin-Capabilities gekoppelt und als auslesbare API verfügbar. Nächster Ausbau bleibt die UI-seitige Pflege/Visualisierung inkl. Default-Rollenprofilen.

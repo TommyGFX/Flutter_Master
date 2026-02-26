@@ -176,6 +176,16 @@ final class OrgManagementController
         }
     }
 
+    public function listRoleCapabilities(Request $request): void
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === null || !$this->authorize($request, 'rbac.manage')) {
+            return;
+        }
+
+        Response::json(['data' => $this->orgManagement->listRoleCapabilityMap($tenantId)]);
+    }
+
     public function listAuditLogs(Request $request): void
     {
         $tenantId = $this->tenantId($request);

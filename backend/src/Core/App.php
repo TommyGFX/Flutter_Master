@@ -209,6 +209,7 @@ final class App
         $router->add('POST', '/api/org/context/switch', [$orgManagement, 'switchContext']);
         $router->add('GET', '/api/org/roles', [$orgManagement, 'listRoles']);
         $router->add('PUT', '/api/org/roles/{roleKey}', [$orgManagement, 'upsertRole']);
+        $router->add('GET', '/api/org/roles/capabilities', [$orgManagement, 'listRoleCapabilities']);
         $router->add('GET', '/api/org/audit-logs', [$orgManagement, 'listAuditLogs']);
         $router->add('POST', '/api/org/audit-logs/export', [$orgManagement, 'exportAuditLogs']);
 
