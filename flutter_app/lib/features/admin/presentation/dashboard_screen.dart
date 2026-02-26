@@ -479,6 +479,18 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
   String selectedRole = '';
   List<Map<String, dynamic>> roles = [];
   List<Map<String, dynamic>> capabilityMatrix = [];
+  List<Map<String, dynamic>> auditLogs = [];
+  bool auditLoading = false;
+  String? auditError;
+  String auditExportSummary = '';
+
+  final auditCompanyCtrl = TextEditingController();
+  final auditActorCtrl = TextEditingController();
+  final auditActionCtrl = TextEditingController();
+  final auditFromCtrl = TextEditingController();
+  final auditToCtrl = TextEditingController();
+  String auditStatus = '';
+  int auditLimit = 50;
 
   @override
   void initState() {
@@ -489,6 +501,11 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
   @override
   void dispose() {
     permissionsCtrl.dispose();
+    auditCompanyCtrl.dispose();
+    auditActorCtrl.dispose();
+    auditActionCtrl.dispose();
+    auditFromCtrl.dispose();
+    auditToCtrl.dispose();
     super.dispose();
   }
 
@@ -549,6 +566,110 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
     final dio = ref.read(dioProvider);
     await dio.put('/admin/roles/$selectedRole/permissions', data: {'permissions': permissions}, options: buildOptions());
     await loadRoles();
+  }
+
+
+  Map<String, dynamic> _auditFilters({bool includeLimit = true}) {
+    final filters = <String, dynamic>{
+      if (auditCompanyCtrl.text.trim().isNotEmpty) 'company_id': auditCompanyCtrl.text.trim(),
+      if (auditActorCtrl.text.trim().isNotEmpty) 'actor_id': auditActorCtrl.text.trim(),
+      if (auditActionCtrl.text.trim().isNotEmpty) 'action_key': auditActionCtrl.text.trim(),
+      if (auditStatus.isNotEmpty) 'status': auditStatus,
+      if (auditFromCtrl.text.trim().isNotEmpty) 'from': auditFromCtrl.text.trim(),
+      if (auditToCtrl.text.trim().isNotEmpty) 'to': auditToCtrl.text.trim(),
+    };
+    if (includeLimit) {
+      filters['limit'] = auditLimit;
+    }
+    return filters;
+  }
+
+  Future<void> loadAuditLogs() async {
+    setState(() {
+      auditLoading = true;
+      auditError = null;
+    });
+
+    final dio = ref.read(dioProvider);
+    try {
+      final response = await dio.get(
+        '/org/audit-logs',
+        queryParameters: _auditFilters(),
+        options: buildOptions(),
+      );
+      final logs = (response.data['data'] as List<dynamic>? ?? const [])
+          .map((entry) => Map<String, dynamic>.from(entry as Map))
+          .toList(growable: false);
+      setState(() {
+        auditLogs = logs;
+      });
+    } on DioException catch (exception) {
+      setState(() => auditError = exception.response?.data.toString() ?? exception.message);
+    } finally {
+      setState(() => auditLoading = false);
+    }
+  }
+
+  Future<void> exportAuditLogs() async {
+    setState(() {
+      auditLoading = true;
+      auditError = null;
+      auditExportSummary = '';
+    });
+
+    final dio = ref.read(dioProvider);
+    try {
+      final response = await dio.post(
+        '/org/audit-logs/export',
+        data: _auditFilters(includeLimit: false),
+        options: buildOptions(),
+      );
+      final data = Map<String, dynamic>.from(response.data['data'] as Map? ?? const {});
+      setState(() {
+        auditExportSummary = 'Export erstellt: ${data['filename'] ?? '-'} (${data['rows'] ?? 0} Zeilen)';
+      });
+    } on DioException catch (exception) {
+      setState(() => auditError = exception.response?.data.toString() ?? exception.message);
+    } finally {
+      setState(() => auditLoading = false);
+    }
+  }
+
+  Widget _buildAuditLogTable() {
+    if (auditLogs.isEmpty) {
+      return const Text('Keine Audit-Logs für die gesetzten Filter gefunden.');
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('Zeitpunkt')),
+            DataColumn(label: Text('Actor')),
+            DataColumn(label: Text('Action')),
+            DataColumn(label: Text('Status')),
+            DataColumn(label: Text('Company')),
+            DataColumn(label: Text('Target')),
+          ],
+          rows: auditLogs.map((entry) {
+            final targetType = entry['target_type']?.toString() ?? '-';
+            final targetId = entry['target_id']?.toString() ?? '-';
+            return DataRow(
+              cells: [
+                DataCell(Text(entry['created_at']?.toString() ?? '-')),
+                DataCell(Text(entry['actor_id']?.toString() ?? '-')),
+                DataCell(Text(entry['action_key']?.toString() ?? '-')),
+                DataCell(Text(entry['status']?.toString() ?? '-')),
+                DataCell(Text(entry['company_id']?.toString() ?? '-')),
+                DataCell(Text('$targetType:$targetId')),
+              ],
+            );
+          }).toList(growable: false),
+        ),
+      ),
+    );
   }
 
   Widget _buildCapabilityMatrix(BuildContext context) {
@@ -652,6 +773,94 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
                     Text('Org-Management Rollen/Capability-Matrix', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _buildCapabilityMatrix(context),
+                    const SizedBox(height: 20),
+                    Text('Audit-Log UX (Filter/Export)', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: auditCompanyCtrl,
+                            decoration: const InputDecoration(labelText: 'Company ID'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: auditActorCtrl,
+                            decoration: const InputDecoration(labelText: 'Actor ID'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: auditActionCtrl,
+                            decoration: const InputDecoration(labelText: 'Action Key'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: DropdownButtonFormField<String>(
+                            value: auditStatus,
+                            items: const [
+                              DropdownMenuItem(value: '', child: Text('Alle Status')),
+                              DropdownMenuItem(value: 'success', child: Text('success')),
+                              DropdownMenuItem(value: 'failed', child: Text('failed')),
+                            ],
+                            onChanged: (value) => setState(() => auditStatus = value ?? ''),
+                            decoration: const InputDecoration(labelText: 'Status'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: auditFromCtrl,
+                            decoration: const InputDecoration(labelText: 'Von (ISO-8601)'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: TextField(
+                            controller: auditToCtrl,
+                            decoration: const InputDecoration(labelText: 'Bis (ISO-8601)'),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 220,
+                          child: DropdownButtonFormField<int>(
+                            value: auditLimit,
+                            items: const [25, 50, 100, 200]
+                                .map((limit) => DropdownMenuItem(value: limit, child: Text('$limit Einträge')))
+                                .toList(growable: false),
+                            onChanged: (value) => setState(() => auditLimit = value ?? 50),
+                            decoration: const InputDecoration(labelText: 'Limit'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        FilledButton(onPressed: auditLoading ? null : loadAuditLogs, child: const Text('Filter anwenden')),
+                        OutlinedButton(onPressed: auditLoading ? null : exportAuditLogs, child: const Text('CSV Export erstellen')),
+                        if (auditLoading) const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                      ],
+                    ),
+                    if (auditError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(l10n.errorWithMessage(auditError!), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    ],
+                    if (auditExportSummary.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(auditExportSummary),
+                    ],
+                    const SizedBox(height: 12),
+                    _buildAuditLogTable(),
                   ],
                 ),
               ),
