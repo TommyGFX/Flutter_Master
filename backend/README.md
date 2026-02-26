@@ -29,6 +29,8 @@ Kopiere `.env.example` nach `.env` und passe DB/Stripe/SMTP Werte an.
 - `POST /api/stripe/checkout-session`
 - `POST /api/stripe/customer-portal`
 - `POST /api/stripe/webhook`
+- `POST /api/pdf/render`
+- `POST /api/email/send`
 
 
 ## Auth Hinweise
@@ -74,4 +76,36 @@ Beispiel-Body:
 
 ### Webhook
 - `POST /api/stripe/webhook`
+- `POST /api/pdf/render`
+- `POST /api/email/send`
 - Wenn `STRIPE_WEBHOOK_SECRET` gesetzt ist, wird die Signatur zwingend validiert.
+
+
+## PDF Rendering (Dompdf)
+- Endpoint: `POST /api/pdf/render`
+- Nutzt entweder `html` aus dem Request-Body oder `template_key` aus `pdf_templates`.
+- Rückgabe enthält Base64-kodiertes PDF (`content_base64`) für flexible Auslieferung im Frontend.
+
+Beispiel-Body:
+```json
+{
+  "template_key": "invoice",
+  "context": {"customer.name": "Max Mustermann"},
+  "filename": "rechnung.pdf"
+}
+```
+
+## Multi-Tenant SMTP Versand (Symfony Mailer)
+- Endpoint: `POST /api/email/send`
+- SMTP Konfiguration wird tenant-spezifisch aus `tenant_smtp_settings` geladen.
+- Fallback auf `.env` (`SMTP_*`), falls kein Tenant-Record existiert.
+- Optional kann `template_key` (aus `email_templates`) genutzt werden.
+
+Beispiel-Body:
+```json
+{
+  "to": "kunde@example.com",
+  "template_key": "welcome",
+  "context": {"customer": {"name": "Max"}}
+}
+```
