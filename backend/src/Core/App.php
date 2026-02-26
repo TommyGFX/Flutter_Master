@@ -6,11 +6,15 @@ namespace App\Core;
 
 use App\Controllers\AuthController;
 use App\Controllers\CrudController;
+use App\Controllers\DocumentController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
 use App\Services\JwtService;
+use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
 use App\Services\StripeService;
+use App\Services\TemplateRendererService;
+use App\Services\TenantMailerService;
 
 final class App
 {
@@ -23,6 +27,7 @@ final class App
         $crud = new CrudController();
         $upload = new UploadController();
         $stripe = new StripeController(new StripeService());
+        $document = new DocumentController(new PdfRendererService(), new TenantMailerService(), new TemplateRendererService());
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -42,6 +47,9 @@ final class App
         $router->add('POST', '/api/stripe/checkout-session', [$stripe, 'createCheckoutSession']);
         $router->add('POST', '/api/stripe/customer-portal', [$stripe, 'createCustomerPortalSession']);
         $router->add('POST', '/api/stripe/webhook', [$stripe, 'webhook']);
+
+        $router->add('POST', '/api/pdf/render', [$document, 'renderPdf']);
+        $router->add('POST', '/api/email/send', [$document, 'sendEmail']);
 
         $router->dispatch($request);
     }

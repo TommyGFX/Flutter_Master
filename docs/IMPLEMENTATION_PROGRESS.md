@@ -67,3 +67,13 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Customer Portal Session Erstellung mit `customer_id` und konfigurierbarer Return-URL.
 - Webhook-Verifikation über `STRIPE_WEBHOOK_SECRET` umgesetzt (falls gesetzt).
 - Event-Handling Struktur für `checkout.session.completed` und Subscription-Lifecycle vorbereitet.
+
+## Schritt 7 – PDF Rendering + SMTP Multi-Tenant Versand (abgeschlossen)
+- Composer-Dependencies ergänzt: `dompdf/dompdf`, `symfony/mailer`, `symfony/mime`.
+- Neue Endpunkte ergänzt:
+  - `POST /api/pdf/render`
+  - `POST /api/email/send`
+- PDF Rendering über `PdfRendererService` (Dompdf) mit Template-Unterstützung (`pdf_templates`) und Context-Rendering umgesetzt.
+- Multi-Tenant SMTP Versand über `TenantMailerService` (Symfony Mailer) mit tenant-spezifischer Konfiguration aus `tenant_smtp_settings` umgesetzt.
+- Fallback auf `.env` SMTP-Konfiguration implementiert, falls keine Tenant-Konfiguration vorhanden ist.
+- Migration für `tenant_smtp_settings` ergänzt.

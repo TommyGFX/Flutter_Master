@@ -57,6 +57,4 @@ Dies ist ein robuster **Starter** mit sauberer Architektur und Kern-Skeletten f�
 Für produktiven Einsatz sollten als nächste Schritte u. a. implementiert werden:
 - echtes JWT/Refresh Token Handling mit Rotationen,
 - Domain-spezifische Stripe Webhook-Persistenz (Provisionierung, Rechnungslauf, Dunning),
-- SMTP Versand & Queue Worker,
-- PDF Rendering Engine,
 - vollständiges RBAC + Plugin Lifecycle UI.

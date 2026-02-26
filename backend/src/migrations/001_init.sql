@@ -102,3 +102,18 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     INDEX idx_refresh_user (tenant_id, user_id),
     INDEX idx_refresh_expires (expires_at)
 );
+
+CREATE TABLE IF NOT EXISTS tenant_smtp_settings (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    host VARCHAR(255) NOT NULL,
+    port INT NOT NULL DEFAULT 587,
+    username VARCHAR(255) NULL,
+    password VARCHAR(255) NULL,
+    encryption VARCHAR(16) NOT NULL DEFAULT 'tls',
+    from_email VARCHAR(255) NOT NULL,
+    from_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenant_smtp (tenant_id)
+);
