@@ -260,7 +260,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 | 5 | E-Mail & Versand | In Umsetzung (Backend-MVP implementiert) | Delivery-Worker + Portal-UI-Flow vervollständigen |
 | 6 | Reporting | In Umsetzung (Backend-MVP implementiert) | Connector-Synchronisation + DATEV/Excel-Datei-Streaming produktiv härten |
 | 7 | Team & Rechte | Teilweise vorhanden | Rollen auf Plugin-Capabilities mappen |
-| 8 | Integrationen | Geplant | Webhook-Contract v1 definieren |
+| 8 | Integrationen | In Umsetzung (Backend-MVP implementiert) | Adapter-Worker + Flutter-Import-Wizard-UI vervollständigen |
 | 9 | Katalog/Preise | Geplant | Produktstamm + Preislistenmodell |
 | 10 | Security/Ops | Teilweise vorhanden | DSGVO-Löschworkflow spezifizieren |
 
@@ -269,3 +269,10 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 - `finance_reporting` Plugin-Endpunkte für KPI-Dashboard, OP-Liste und Steuerreport umgesetzt.
 - Export-Endpunkt für DATEV-, OP- und Steuerdaten (CSV/Excel-Formatkennung) ergänzt.
 - Connector-Verwaltung für Lexoffice/SevDesk/FastBill inkl. Webhook-Queue-Logging implementiert.
+
+
+### Phase 8 – Implementierungsstand (Backend-MVP)
+- `automation_integrations` Plugin-Endpunkte für API-Versionierung, Idempotenz-Claims und Integrationskatalog ergänzt.
+- CRM-Adapter-Backbone (HubSpot/Pipedrive) inkl. Connector-Konfiguration und Sync-Queue-Logging implementiert.
+- Time-Tracking nach Rechnung umgesetzt (`time_entries` -> `billing_documents`/`billing_line_items`) mit tenant-sicherem Invoicing-Flow.
+- Zapier/Make-Workflow-Runs sowie Import-Wizard (Preview + Execute für Kunden/Produkte/Historien) als Backend-MVP verfügbar.

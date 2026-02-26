@@ -811,3 +811,124 @@ CREATE TABLE IF NOT EXISTS org_company_memberships (
     CONSTRAINT fk_org_company_membership_company FOREIGN KEY (tenant_id, company_id)
         REFERENCES org_companies (tenant_id, company_id)
 );
+
+CREATE TABLE IF NOT EXISTS automation_api_versions (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    api_name VARCHAR(128) NOT NULL,
+    version VARCHAR(32) NOT NULL,
+    base_path VARCHAR(191) NOT NULL,
+    is_deprecated TINYINT(1) NOT NULL DEFAULT 0,
+    sunset_at TIMESTAMP NULL,
+    idempotency_required TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_automation_api_version (tenant_id, api_name, version)
+);
+
+CREATE TABLE IF NOT EXISTS automation_idempotency_keys (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    idempotency_key VARCHAR(128) NOT NULL,
+    scope VARCHAR(128) NOT NULL,
+    request_hash CHAR(64) NOT NULL,
+    response_json JSON NOT NULL,
+    status_code INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_automation_idempotency (tenant_id, idempotency_key, scope)
+);
+
+CREATE TABLE IF NOT EXISTS automation_crm_connectors (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    credentials_json JSON NOT NULL,
+    sync_mode VARCHAR(32) NOT NULL DEFAULT 'manual',
+    is_enabled TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_automation_crm_connector (tenant_id, provider)
+);
+
+CREATE TABLE IF NOT EXISTS automation_crm_sync_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    entity_type VARCHAR(64) NOT NULL,
+    entity_id VARCHAR(128) NOT NULL,
+    payload_json JSON NOT NULL,
+    sync_status VARCHAR(32) NOT NULL DEFAULT 'queued',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_automation_crm_sync (tenant_id, provider, sync_status, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS automation_time_entries (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    entry_key VARCHAR(128) NOT NULL,
+    project_id VARCHAR(128) NOT NULL,
+    user_id VARCHAR(128) NOT NULL,
+    work_date DATE NOT NULL,
+    hours DECIMAL(10,4) NOT NULL,
+    hourly_rate DECIMAL(10,2) NOT NULL,
+    description TEXT NULL,
+    billable_status VARCHAR(32) NOT NULL DEFAULT 'open',
+    invoice_document_id BIGINT UNSIGNED NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_automation_time_entry (tenant_id, entry_key),
+    INDEX idx_automation_time_project (tenant_id, project_id, billable_status),
+    CONSTRAINT fk_automation_time_invoice FOREIGN KEY (invoice_document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS automation_workflow_catalog (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    trigger_key VARCHAR(128) NOT NULL,
+    action_key VARCHAR(128) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_automation_workflow_catalog (tenant_id, provider, trigger_key, action_key)
+);
+
+CREATE TABLE IF NOT EXISTS automation_workflow_runs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    trigger_key VARCHAR(128) NOT NULL,
+    action_key VARCHAR(128) NOT NULL,
+    payload_json JSON NOT NULL,
+    run_status VARCHAR(32) NOT NULL DEFAULT 'queued',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_automation_workflow_runs (tenant_id, provider, run_status, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS automation_import_products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    sku VARCHAR(128) NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    unit_price DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tax_rate DECIMAL(8,4) NOT NULL DEFAULT 19.0000,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_automation_import_products (tenant_id, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS automation_import_historical_invoices (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    source_id VARCHAR(128) NULL,
+    document_number VARCHAR(128) NOT NULL,
+    customer_name VARCHAR(255) NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    grand_total DECIMAL(18,2) NOT NULL DEFAULT 0,
+    issued_on DATE NULL,
+    due_on DATE NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_automation_import_hist_invoices (tenant_id, document_number)
+);
