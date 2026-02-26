@@ -63,6 +63,19 @@ final class OrgManagementController
         }
     }
 
+
+    public function listMemberships(Request $request, string $companyId): void
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === null || !$this->authorize($request, 'org.read')) {
+            return;
+        }
+
+        Response::json([
+            'data' => $this->orgManagement->listCompanyMemberships($tenantId, trim($companyId)),
+        ]);
+    }
+
     public function assignMembership(Request $request, string $companyId): void
     {
         $tenantId = $this->tenantId($request);

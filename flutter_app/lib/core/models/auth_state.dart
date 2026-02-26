@@ -4,6 +4,7 @@ class AuthState {
     this.userId,
     this.entrypoint,
     this.tenantId,
+    this.companyId,
     this.permissions = const [],
   });
 
@@ -11,6 +12,7 @@ class AuthState {
   final String? userId;
   final String? entrypoint;
   final String? tenantId;
+  final String? companyId;
   final List<String> permissions;
 
   bool get isLoggedIn => token != null && token!.isNotEmpty;
@@ -20,6 +22,7 @@ class AuthState {
     String? userId,
     String? entrypoint,
     String? tenantId,
+    String? companyId,
     List<String>? permissions,
   }) {
     return AuthState(
@@ -27,6 +30,7 @@ class AuthState {
       userId: userId ?? this.userId,
       entrypoint: entrypoint ?? this.entrypoint,
       tenantId: tenantId ?? this.tenantId,
+      companyId: companyId ?? this.companyId,
       permissions: permissions ?? this.permissions,
     );
   }

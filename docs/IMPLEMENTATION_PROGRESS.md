@@ -743,3 +743,15 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - **Regressionstest** ergänzt für Filter-/Export-Verhalten von Org-Management Audit-Logs (`backend/tests/Regression/org_management_audit_log_filter_export_regression_test.php`).
 
 **Zwischenfazit Phase 7:** Der geforderte Audit-Log-Flow (Filter + Export) ist in API und Org-Management-UI umgesetzt; Governance-relevante Einsicht und Datenmitnahme sind tenant-sicher bedienbar.
+
+## Schritt 42 – Phase 7 abgesichert: Multi-Company-Kontextwechsel + Membership-UX End-to-End
+- **Org-Management API erweitert:**
+  - Neuer Endpoint `GET /api/org/companies/{companyId}/memberships` liefert Teamzuordnungen je Company für die Membership-UX.
+  - Service-Layer um `listCompanyMemberships` ergänzt; tenant-sicherer Join auf Company + Membership.
+- **Flutter Admin-UI erweitert (Org-Management):**
+  - Neuer Bereich „Multi-Company Kontext“ mit Company-Auswahl, Membership-Pflege (`user_id` + `role_key`) und kontextbezogenem `POST /org/context/switch`-Flow.
+  - Erfolgreicher Kontextwechsel aktualisiert den Auth-State (`companyId`, effektive Permissions) und sendet Folgerequests mit `X-Company-Id` Header.
+- **Regression abgesichert:**
+  - `backend/tests/Regression/org_management_multi_company_context_regression_test.php` deckt Membership-Liste, Membership-Zuweisung und Kontextwechsel inkl. Rollen-/Permission-Auflösung ab.
+
+**Zwischenfazit Phase 7:** Multi-Company-Kontextwechsel und Membership-UX sind nun End-to-End vom API- bis zum Flutter-Admin-Flow umgesetzt und regressionsseitig abgesichert.

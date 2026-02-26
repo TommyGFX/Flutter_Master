@@ -27,9 +27,20 @@ class AuthController extends Notifier<AuthState> {
       userId: response.data['user_id']?.toString(),
       entrypoint: response.data['entrypoint'] as String? ?? 'admin',
       tenantId: response.data['tenant_id'] as String? ?? tenant,
+      companyId: null,
       permissions: (response.data['permissions'] as List<dynamic>? ?? const [])
           .map((permission) => permission.toString())
           .toList(growable: false),
+    );
+  }
+
+  void applyCompanyContext({
+    required String companyId,
+    required List<String> permissions,
+  }) {
+    state = state.copyWith(
+      companyId: companyId,
+      permissions: List<String>.unmodifiable(permissions),
     );
   }
 }
