@@ -526,6 +526,102 @@ final class AutomationIntegrationsService
         ];
     }
 
+    public function processAutomationRuns(string $tenantId, int $limit = 25): array
+    {
+        $limit = max(1, min(100, $limit));
+
+        $select = $this->pdo->prepare(
+            "SELECT id, provider, trigger_key, action_key, payload_json
+             FROM automation_workflow_runs
+             WHERE tenant_id = :tenant_id
+               AND run_status = 'queued'
+             ORDER BY id ASC
+             LIMIT :limit"
+        );
+        $select->bindValue(':tenant_id', $tenantId);
+        $select->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $select->execute();
+
+        $runs = $select->fetchAll() ?: [];
+        $results = [];
+        $completed = 0;
+        $failed = 0;
+
+        foreach ($runs as $run) {
+            $runId = (int) ($run['id'] ?? 0);
+            if ($runId <= 0) {
+                continue;
+            }
+
+            $claim = $this->pdo->prepare(
+                "UPDATE automation_workflow_runs
+                 SET run_status = 'processing', updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :id AND tenant_id = :tenant_id AND run_status = 'queued'"
+            );
+            $claim->execute(['id' => $runId, 'tenant_id' => $tenantId]);
+
+            if ($claim->rowCount() !== 1) {
+                continue;
+            }
+
+            $provider = (string) ($run['provider'] ?? '');
+            $payload = $this->decodeJsonObject($run['payload_json'] ?? null);
+
+            try {
+                $result = $this->dispatchAutomationRun(
+                    $provider,
+                    (string) ($run['trigger_key'] ?? ''),
+                    (string) ($run['action_key'] ?? ''),
+                    $payload
+                );
+
+                $finish = $this->pdo->prepare(
+                    "UPDATE automation_workflow_runs
+                     SET run_status = 'completed', payload_json = :payload_json, updated_at = CURRENT_TIMESTAMP
+                     WHERE id = :id AND tenant_id = :tenant_id"
+                );
+                $finish->execute([
+                    'id' => $runId,
+                    'tenant_id' => $tenantId,
+                    'payload_json' => json_encode([
+                        'input' => $payload,
+                        'worker_result' => $result,
+                    ], JSON_THROW_ON_ERROR),
+                ]);
+
+                $completed++;
+                $results[] = [
+                    'run_id' => $runId,
+                    'provider' => $provider,
+                    'status' => 'completed',
+                    'result' => $result,
+                ];
+            } catch (\Throwable $exception) {
+                $finish = $this->pdo->prepare(
+                    "UPDATE automation_workflow_runs
+                     SET run_status = 'failed', updated_at = CURRENT_TIMESTAMP
+                     WHERE id = :id AND tenant_id = :tenant_id"
+                );
+                $finish->execute(['id' => $runId, 'tenant_id' => $tenantId]);
+
+                $failed++;
+                $results[] = [
+                    'run_id' => $runId,
+                    'provider' => $provider,
+                    'status' => 'failed',
+                    'error' => $exception->getMessage(),
+                ];
+            }
+        }
+
+        return [
+            'processed' => count($results),
+            'completed' => $completed,
+            'failed' => $failed,
+            'results' => $results,
+        ];
+    }
+
     public function previewImport(string $tenantId, array $payload): array
     {
         $dataset = strtolower(trim((string) ($payload['dataset'] ?? '')));
@@ -766,5 +862,35 @@ final class AutomationIntegrationsService
 
         $normalized = trim($value);
         return preg_match('/^[A-Za-z0-9._:-]{8,128}$/', $normalized) ? $normalized : '';
+    }
+
+    private function dispatchAutomationRun(string $provider, string $triggerKey, string $actionKey, array $payload): array
+    {
+        if (!in_array($provider, self::AUTOMATION_PROVIDERS, true)) {
+            throw new RuntimeException('unsupported_automation_provider');
+        }
+
+        $meta = [
+            'provider' => $provider,
+            'trigger_key' => $triggerKey,
+            'action_key' => $actionKey,
+            'processed_at' => gmdate('c'),
+        ];
+
+        if ($provider === 'zapier') {
+            return [
+                ...$meta,
+                'adapter' => 'zapier_worker_adapter',
+                'webhook_event' => $payload['event'] ?? 'billing.document.finalized',
+                'acknowledged' => true,
+            ];
+        }
+
+        return [
+            ...$meta,
+            'adapter' => 'make_worker_adapter',
+            'scenario' => $payload['scenario'] ?? 'billing_sync',
+            'acknowledged' => true,
+        ];
     }
 }

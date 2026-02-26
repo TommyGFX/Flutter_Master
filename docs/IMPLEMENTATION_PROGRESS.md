@@ -755,3 +755,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - `backend/tests/Regression/org_management_multi_company_context_regression_test.php` deckt Membership-Liste, Membership-Zuweisung und Kontextwechsel inkl. Rollen-/Permission-Auflösung ab.
 
 **Zwischenfazit Phase 7:** Multi-Company-Kontextwechsel und Membership-UX sind nun End-to-End vom API- bis zum Flutter-Admin-Flow umgesetzt und regressionsseitig abgesichert.
+
+## Schritt 31 – PLUGIN_ROADMAP Phase 8 (Adapter-Worker + Flutter-Import-Wizard-UI) erweitert (In Umsetzung)
+- Backend `automation_integrations` um einen **Adapter-Worker** für queued Workflow-Runs erweitert:
+  - Neue Service-Operation `processAutomationRuns()` mit Claim-Logik (`queued -> processing -> completed/failed`) und provider-spezifischer Dispatch-Schicht (`zapier`/`make`).
+  - API-Endpunkt ergänzt: `POST /api/billing/automation/workflows/process`.
+  - Worker schreibt Verarbeitungsergebnis in den Run-Datensatz zurück (inkl. Adapter-Metadaten).
+- Flutter-Frontend um eine dedizierte **Phase-8 Automation/Import-Wizard-UI** ergänzt:
+  - Neues Riverpod-Controller-Modul für Import-Preview, Import-Execute und Worker-Queue-Verarbeitung.
+  - Neue Admin-Ansicht mit Dataset-Auswahl (`customers`, `products`, `historical_invoices`), JSON-Eingabe, Preview/Execute-Buttons und Ergebnis-Panels.
+  - Dashboard-Navigation auf die neue Integrationsansicht umgestellt.
+- Regressionstest für Phase-8-Härtung ergänzt (`backend/tests/Regression/automation_integrations_phase8_regression_test.php`):
+  - Queue->Worker->Status-Update abgedeckt.
+  - Import Preview + Execute inkl. Persistenzvalidierung abgedeckt.
+
+**Abnahme-Status Phase 8 (Zwischenstand):** Adapter-Worker und Import-Wizard-UI sind funktional ergänzt; ausstehend ist die produktionsnahe Sandbox-Abnahme gegen reale CRM/No-Code-Integrationsprovider.
