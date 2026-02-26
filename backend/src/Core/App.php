@@ -13,6 +13,7 @@ use App\Controllers\BillingPaymentsController;
 use App\Controllers\TaxComplianceDeController;
 use App\Controllers\SubscriptionsBillingController;
 use App\Controllers\DocumentDeliveryController;
+use App\Controllers\FinanceReportingController;
 use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
@@ -27,6 +28,7 @@ use App\Services\BillingPaymentsService;
 use App\Services\TaxComplianceDeService;
 use App\Services\SubscriptionsBillingService;
 use App\Services\DocumentDeliveryService;
+use App\Services\FinanceReportingService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
@@ -61,6 +63,7 @@ final class App
         $taxComplianceDe = new TaxComplianceDeController(new TaxComplianceDeService(Database::connection(), new BillingCoreService(Database::connection())));
         $subscriptionsBilling = new SubscriptionsBillingController(new SubscriptionsBillingService(Database::connection()));
         $documentDelivery = new DocumentDeliveryController(new DocumentDeliveryService(Database::connection()));
+        $financeReporting = new FinanceReportingController(new FinanceReportingService(Database::connection()));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -165,6 +168,14 @@ final class App
         $router->add('GET', '/api/portal/documents', [$documentDelivery, 'listPortalDocuments']);
         $router->add('GET', '/api/portal/documents/{id}', [$documentDelivery, 'getPortalDocument']);
         $router->add('POST', '/api/billing/delivery/tracking/events', [$documentDelivery, 'trackEvent']);
+
+        $router->add('GET', '/api/billing/finance/kpis', [$financeReporting, 'kpis']);
+        $router->add('GET', '/api/billing/finance/op-list', [$financeReporting, 'openItems']);
+        $router->add('GET', '/api/billing/finance/tax-report', [$financeReporting, 'taxReport']);
+        $router->add('POST', '/api/billing/finance/exports', [$financeReporting, 'export']);
+        $router->add('GET', '/api/billing/finance/connectors', [$financeReporting, 'listConnectors']);
+        $router->add('PUT', '/api/billing/finance/connectors', [$financeReporting, 'upsertConnector']);
+        $router->add('POST', '/api/billing/finance/connectors/{provider}/webhook', [$financeReporting, 'publishWebhook']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);

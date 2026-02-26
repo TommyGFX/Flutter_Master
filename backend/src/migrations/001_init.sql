@@ -755,3 +755,26 @@ CREATE TABLE IF NOT EXISTS document_delivery_tracking_events (
     INDEX idx_document_delivery_tracking_document (tenant_id, document_id),
     CONSTRAINT fk_document_delivery_tracking_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
 );
+
+CREATE TABLE IF NOT EXISTS finance_reporting_connectors (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    webhook_url VARCHAR(512) NULL,
+    credentials_json JSON NULL,
+    is_enabled TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_finance_reporting_connector (tenant_id, provider),
+    INDEX idx_finance_reporting_connector_enabled (tenant_id, is_enabled)
+);
+
+CREATE TABLE IF NOT EXISTS finance_reporting_webhook_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    webhook_url VARCHAR(512) NULL,
+    payload_json JSON NOT NULL,
+    delivery_status VARCHAR(32) NOT NULL DEFAULT 'queued',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_finance_reporting_webhook_logs (tenant_id, provider, delivery_status, created_at)
+);
