@@ -932,3 +932,102 @@ CREATE TABLE IF NOT EXISTS automation_import_historical_invoices (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_automation_import_hist_invoices (tenant_id, document_number)
 );
+
+CREATE TABLE IF NOT EXISTS catalog_products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'catalog_pricing',
+    sku VARCHAR(128) NOT NULL,
+    type VARCHAR(32) NOT NULL DEFAULT 'service',
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    unit_price DECIMAL(18,2) NOT NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    tax_rate DECIMAL(8,4) NOT NULL DEFAULT 19.0000,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    metadata_json JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_catalog_product_sku (tenant_id, sku),
+    INDEX idx_catalog_products_active (tenant_id, is_active, name)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_price_lists (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'catalog_pricing',
+    name VARCHAR(255) NOT NULL,
+    customer_segment VARCHAR(64) NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    valid_from DATE NULL,
+    valid_to DATE NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_catalog_price_list_name (tenant_id, name),
+    INDEX idx_catalog_price_lists_active (tenant_id, is_active, customer_segment)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_price_list_items (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    price_list_id BIGINT UNSIGNED NOT NULL,
+    product_id BIGINT UNSIGNED NOT NULL,
+    min_quantity INT NOT NULL DEFAULT 1,
+    override_price DECIMAL(18,2) NULL,
+    discount_percent DECIMAL(8,4) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_catalog_price_list_item (tenant_id, price_list_id, product_id, min_quantity),
+    INDEX idx_catalog_price_list_product (tenant_id, product_id, min_quantity),
+    CONSTRAINT fk_catalog_price_list_items_list FOREIGN KEY (price_list_id) REFERENCES catalog_price_lists (id),
+    CONSTRAINT fk_catalog_price_list_items_product FOREIGN KEY (product_id) REFERENCES catalog_products (id)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_bundles (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'catalog_pricing',
+    bundle_key VARCHAR(128) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    bundle_price DECIMAL(18,2) NOT NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    tax_rate DECIMAL(8,4) NOT NULL DEFAULT 19.0000,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_catalog_bundle_key (tenant_id, bundle_key),
+    INDEX idx_catalog_bundles_active (tenant_id, is_active, name)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_bundle_items (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    bundle_id BIGINT UNSIGNED NOT NULL,
+    product_id BIGINT UNSIGNED NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_catalog_bundle_item (tenant_id, bundle_id, product_id),
+    CONSTRAINT fk_catalog_bundle_items_bundle FOREIGN KEY (bundle_id) REFERENCES catalog_bundles (id),
+    CONSTRAINT fk_catalog_bundle_items_product FOREIGN KEY (product_id) REFERENCES catalog_products (id)
+);
+
+CREATE TABLE IF NOT EXISTS catalog_discount_codes (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'catalog_pricing',
+    code VARCHAR(64) NOT NULL,
+    discount_type VARCHAR(16) NOT NULL DEFAULT 'percent',
+    discount_value DECIMAL(18,4) NOT NULL,
+    applies_to VARCHAR(16) NOT NULL DEFAULT 'one_time',
+    max_redemptions INT NULL,
+    current_redemptions INT NOT NULL DEFAULT 0,
+    valid_from DATE NULL,
+    valid_to DATE NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_catalog_discount_code (tenant_id, code),
+    INDEX idx_catalog_discount_codes_active (tenant_id, is_active, applies_to)
+);

@@ -261,7 +261,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 | 6 | Reporting | In Umsetzung (Backend-MVP implementiert) | Connector-Synchronisation + DATEV/Excel-Datei-Streaming produktiv härten |
 | 7 | Team & Rechte | Teilweise vorhanden | Rollen auf Plugin-Capabilities mappen |
 | 8 | Integrationen | In Umsetzung (Backend-MVP implementiert) | Adapter-Worker + Flutter-Import-Wizard-UI vervollständigen |
-| 9 | Katalog/Preise | Geplant | Produktstamm + Preislistenmodell |
+| 9 | Katalog/Preise | In Umsetzung (Backend-MVP implementiert) | Flutter-Katalog-UI + Angebotseditor-Integration der Preislogik |
 | 10 | Security/Ops | Teilweise vorhanden | DSGVO-Löschworkflow spezifizieren |
 
 
@@ -276,3 +276,10 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 - CRM-Adapter-Backbone (HubSpot/Pipedrive) inkl. Connector-Konfiguration und Sync-Queue-Logging implementiert.
 - Time-Tracking nach Rechnung umgesetzt (`time_entries` -> `billing_documents`/`billing_line_items`) mit tenant-sicherem Invoicing-Flow.
 - Zapier/Make-Workflow-Runs sowie Import-Wizard (Preview + Execute für Kunden/Produkte/Historien) als Backend-MVP verfügbar.
+
+
+
+### Phase 9 – Implementierungsstand (Backend-MVP)
+- `catalog_pricing` Plugin-Endpunkte für Produktstamm, Preislisten, Staffelregeln, Bundles und Rabattcodes ergänzt.
+- Preislogik-Service für tenant-sichere Quote-Berechnung (Netto/Rabatt/Steuer/Gesamt) inkl. Preislisten- und Rabattcode-Auflösung implementiert.
+- Datenmodell für SKU-basierten Produktkatalog sowie wiederverwendbare Preisregeln in Sales-/Billing-Flows erweitert.

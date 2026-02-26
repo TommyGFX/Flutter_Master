@@ -337,3 +337,25 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - No-Code-Workflow-Queueing für Zapier/Make und Import-Wizard-Preview/Execute für Kunden, Produkte und historische Rechnungen.
 
 **Abnahme-Status Phase 8:** Die Integrationsfähigkeit ist als Backend-MVP umgesetzt (API-first, CRM-Adapter, Time-Tracking-Invoicing, No-Code-Automation, Import-Wizard). Für die vollständige Produktabnahme folgen Worker-Ausführung/Retry, Provider-spezifische Mapping-Profile und geführte Flutter-UI-Flows.
+
+## Schritt 25 – PLUGIN_ROADMAP Phase 9 (Produktkatalog & Preislogik) umgesetzt (Backend-MVP)
+- Neues Backend-Plugin-Modul **`catalog_pricing`** ergänzt und in das API-Routing integriert.
+- Persistenz für Produktkatalog und Preislogik erweitert:
+  - `catalog_products` (SKU, Produkttyp, Standardpreis, Standardsteuersatz)
+  - `catalog_price_lists`, `catalog_price_list_items` (B2B-Sonderpreise, Mengenstaffeln, Preisüberschreibungen/Discount)
+  - `catalog_bundles`, `catalog_bundle_items` (wiederverwendbare Bundle-Definitionen)
+  - `catalog_discount_codes` (Rabattcodes für One-Time, Subscription oder beide Umsatztypen)
+- Neue API-Endpunkte für Phase-9-Workflows ergänzt:
+  - Produkte: `GET|POST /api/billing/catalog/products`, `PUT /api/billing/catalog/products/{id}`
+  - Preislisten: `GET|POST /api/billing/catalog/price-lists`, `PUT /api/billing/catalog/price-lists/{id}`
+  - Preislogikregeln: `GET|POST /api/billing/catalog/price-lists/{id}/items`
+  - Bundles: `GET|POST /api/billing/catalog/bundles`, `PUT /api/billing/catalog/bundles/{id}`
+  - Rabattcodes: `GET|POST /api/billing/catalog/discount-codes`
+  - Preisberechnung: `POST /api/billing/catalog/quotes/calculate`
+- Fachlogik in `CatalogPricingService` implementiert:
+  - Tenant-sichere Produkt-/Preisliste-/Bundle-Verwaltung.
+  - Staffelpreisauflösung über Preislistenregeln (`min_quantity`, `override_price`, `discount_percent`).
+  - Rabattcode-Validierung inkl. Gültigkeitszeitraum, Anwendungsbereich (`one_time|subscription|both`) und Kontingentgrenze.
+  - Wiederverwendbare Quote-Berechnung (Netto, Rabatt, Steuer, Gesamtsumme) für Sales- und Billing-Flows.
+
+**Abnahme-Status Phase 9:** Wiederverwendbare Preislogik ist als Backend-MVP umgesetzt und für Sales-/Billing-Workflows per API verfügbar.
