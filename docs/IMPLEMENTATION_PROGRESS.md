@@ -442,3 +442,19 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - [ ] Flutter-Controller-Test `billing_flow_controller_test.dart` konnte in dieser Umgebung nicht ausgeführt werden (Flutter SDK/CLI nicht verfügbar).
 
 **Abnahme-Status Schritt 29:** Komplett-Review ist durchgeführt, erledigte Arbeitspakete sind sichtbar markiert und der Fortschritt ist mit Testläufen dokumentiert.
+
+## Schritt 30 – PLUGIN_ROADMAP Phase-1-Abnahme abgeschlossen (Nummernkreis/Mehrwährung/PDF im E2E-Flow)
+- Billing-E2E-Orchestrierung im Flutter-Controller fachlich erweitert, um die geforderte Abnahme explizit auszuführen:
+  - Dokumentprüfung direkt nach Finalisierung von Angebot und Rechnung (`fetchDocumentSnapshot`).
+  - Validierung, dass der Nummernkreis tatsächlich vergeben wurde (`document_number` muss gesetzt sein).
+  - Validierung der fixierten Mehrwährungsdaten (`currency_code = USD`, `exchange_rate = 1.08`) über beide Dokumente hinweg.
+- API-Repository für den E2E-Flow ergänzt:
+  - `createQuote` akzeptiert jetzt `currencyCode` und `exchangeRate` als explizite Eingaben.
+  - neues `GET /billing/documents/{id}`-Reading im Flow für die Snapshot-Prüfung.
+- Testabdeckung im Flutter-Testset erweitert:
+  - zusätzlicher Testfall prüft Nummernkreis + Mehrwährung + PDF-Ausgabe im Angebot->Rechnung->bezahlt Flow.
+  - bestehender Fehlerpfad-Test bleibt erhalten und schützt weiterhin die kontextbezogene Fehlerkommunikation.
+- Fortschrittsdokumentation aktualisiert:
+  - Roadmap Phase 1 auf **Abgeschlossen** gesetzt und nächster Schritt für Phase 2 konkretisiert.
+
+**Abnahme-Status Schritt 30:** Die in der Roadmap geforderte Phase-1-Abnahme (Nummernkreis/Mehrwährung/PDF-Export im E2E-Flow) ist fachlich und testseitig dokumentiert abgeschlossen.
