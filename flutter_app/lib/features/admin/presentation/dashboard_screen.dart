@@ -791,8 +791,8 @@ class _AutomationCard extends ConsumerStatefulWidget {
 class _AutomationCardState extends ConsumerState<_AutomationCard> with _ApiClientMixin {
   bool loading = false;
   String output = '';
-  final TextEditingController stripePriceIdController = TextEditingController(text: 'price_demo');
-  final TextEditingController stripeCustomerIdController = TextEditingController(text: 'cus_demo');
+  final TextEditingController stripePriceIdController = TextEditingController();
+  final TextEditingController stripeCustomerIdController = TextEditingController();
 
   @override
   void dispose() {
@@ -807,6 +807,12 @@ class _AutomationCardState extends ConsumerState<_AutomationCard> with _ApiClien
     try {
       final response = await dio.post(path, data: payload, options: buildOptions());
       setState(() => output = prettyJson(response.data));
+    } on DioException catch (error) {
+      final responseBody = error.response?.data;
+      final message = responseBody == null
+          ? {'error': error.message ?? 'Unbekannter Netzwerkfehler'}
+          : responseBody;
+      setState(() => output = prettyJson(message));
     } finally {
       setState(() => loading = false);
     }
