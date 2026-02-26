@@ -25,6 +25,10 @@ class AuthController extends Notifier<AuthState> {
     state = state.copyWith(
       token: response.data['token'] as String?,
       entrypoint: response.data['entrypoint'] as String? ?? 'admin',
+      tenantId: response.data['tenant_id'] as String? ?? tenant,
+      permissions: (response.data['permissions'] as List<dynamic>? ?? const [])
+          .map((permission) => permission.toString())
+          .toList(growable: false),
     );
   }
 }
