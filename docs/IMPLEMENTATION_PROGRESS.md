@@ -689,3 +689,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Login-Routing leitet `entrypoint=customer` direkt ins Kundenportal (`/portal`).
 
 **Abnahme-Status Schritt 38:** Delivery-Worker und Kundenportal-UI sind implementiert; offener Abschluss für Phase 5 ist die produktionsnahe Sandbox-Abnahme der Provider inkl. Tracking-/Monitoring-Nachweis.
+
+## Schritt 39 – Phase 6 gehärtet (Connector-Sync + DATEV/Excel-Streaming)
+- `finance_reporting` um produktionsnahe Export-Download-Pipeline erweitert:
+  - Neuer Endpoint `POST /api/billing/finance/exports/stream` liefert DATEV/OP/Steuerexporte als Datei-Stream.
+  - Download-Header inkl. Dateiname, MIME-Type und Cache-Control über `Response::streamDownload` ergänzt.
+  - Export-Writer schreibt CSV (`;`) bzw. Excel-kompatibles TSV (`\t`) zeilenweise auf `php://output`.
+- Connector-Synchronisation eingeführt:
+  - Neuer Endpoint `POST /api/billing/finance/connectors/sync` verarbeitet Queue-Einträge aus `finance_reporting_webhook_logs`.
+  - Statusübergänge `queued -> delivered|failed` mit persistenter Rückschreibung implementiert.
+  - Outbound-Webhook-Call mit Timeout, HMAC-Signaturheader (`X-Finance-Signature`) und HTTP-Statusauswertung gehärtet.
+- Regressionstest ergänzt:
+  - `backend/tests/Regression/finance_reporting_phase6_regression_test.php`
+  - Deckt Datei-Streaming (Header/Rows) und Connector-Sync-Failurepfad (fehlende Webhook-URL) inkl. Statuspersistenz ab.
+
+**Abnahme-Status Schritt 39:** Der konkrete Phase-6-Backlogpunkt „Connector-Synchronisation + DATEV/Excel-Datei-Streaming produktiv härten“ ist umgesetzt und regressionsseitig abgesichert; für die finale Produktionsabnahme fehlen nur noch reale Provider-Sandbox-Tests (Lexoffice/SevDesk/FastBill) mit tenant-spezifischen Secrets/Endpoints.
