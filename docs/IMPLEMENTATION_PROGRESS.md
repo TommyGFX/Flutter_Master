@@ -165,3 +165,10 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - `MaterialApp` auf Lokalisierungs-Delegates und lokalisierte App-Titel umgestellt.
 - Senior-Code-Review nach Flutter-3.41-Richtlinien dokumentiert und technische Verbesserungen umgesetzt (u. a. Controller-Disposal).
 - Vollständige Frontend-API-Dokumentation inkl. Auth-, Admin-, Platform-, Integrations- und CRUD-Endpunkten ergänzt (`docs/FRONTEND_I18N_CODE_REVIEW_AND_API.md`).
+
+## Schritt 15 – Plugin-Roadmap für Billing/Finance-SaaS (geplant und dokumentiert)
+- Detaillierte, aufeinander aufbauende Delivery-Roadmap für alle angefragten Funktionsblöcke erstellt.
+- Alle Funktionspakete als Plugin-Zielarchitektur beschrieben (Core Billing, Payments, Tax/Compliance, Subscriptions, Delivery, Reporting, Org, Integrations, Catalog, Security/Ops).
+- Phase-übergreifende Qualitätsstrategie ergänzt (Unit, Contract, Migration, Flutter Widget/Golden, E2E).
+- Fortschrittstabelle mit Status und jeweils nächstem konkreten Schritt ergänzt.
+- Referenzdokument: `docs/PLUGIN_ROADMAP_BILLING_SAAS.md`.
