@@ -9,6 +9,7 @@ use App\Controllers\AdminPluginController;
 use App\Controllers\CrudController;
 use App\Controllers\DocumentController;
 use App\Controllers\BillingCoreController;
+use App\Controllers\BillingPaymentsController;
 use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
@@ -19,6 +20,7 @@ use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
 use App\Services\ApprovalService;
 use App\Services\BillingCoreService;
+use App\Services\BillingPaymentsService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
@@ -49,6 +51,7 @@ final class App
         $accounts = new AccountManagementController();
         $pluginFoundation = new PluginFoundationController(new RbacService());
         $billingCore = new BillingCoreController(new BillingCoreService(Database::connection()), new PdfRendererService());
+        $billingPayments = new BillingPaymentsController(new BillingPaymentsService(Database::connection()));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -112,6 +115,20 @@ final class App
         $router->add('POST', '/api/billing/documents/{id}/status', [$billingCore, 'setStatus']);
         $router->add('GET', '/api/billing/documents/{id}/history', [$billingCore, 'history']);
         $router->add('GET', '/api/billing/documents/{id}/pdf', [$billingCore, 'exportPdf']);
+
+
+        $router->add('GET', '/api/billing/documents/{id}/payment-links', [$billingPayments, 'listPaymentLinks']);
+        $router->add('POST', '/api/billing/documents/{id}/payment-links', [$billingPayments, 'createPaymentLink']);
+        $router->add('GET', '/api/billing/documents/{id}/payments', [$billingPayments, 'listPayments']);
+        $router->add('POST', '/api/billing/documents/{id}/payments', [$billingPayments, 'recordPayment']);
+
+        $router->add('GET', '/api/billing/dunning/config', [$billingPayments, 'getDunningConfig']);
+        $router->add('PUT', '/api/billing/dunning/config', [$billingPayments, 'saveDunningConfig']);
+        $router->add('POST', '/api/billing/dunning/run', [$billingPayments, 'runDunning']);
+        $router->add('GET', '/api/billing/dunning/cases', [$billingPayments, 'listDunningCases']);
+
+        $router->add('GET', '/api/billing/bank-account', [$billingPayments, 'getBankAccount']);
+        $router->add('PUT', '/api/billing/bank-account', [$billingPayments, 'saveBankAccount']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);

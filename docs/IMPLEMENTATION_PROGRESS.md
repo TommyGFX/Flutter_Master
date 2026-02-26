@@ -208,3 +208,24 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Dokumenthistorie je Beleg mit Domain-Aktionen als Audit-ähnliche Verlaufsspur ergänzt.
 
 **Abnahme-Status Phase 1:** MVP-End-to-End-Backbone für Angebot/Rechnung/Gutschrift inkl. Kundenstamm, Nummernkreis, Rechenlogik, PDF-Export, Status und Historie ist technisch implementiert.
+
+## Schritt 18 – PLUGIN_ROADMAP Phase 2 (Payments & Mahnwesen MVP+) umgesetzt (abgeschlossen)
+- Neues Backend-Plugin-Modul **`billing_payments`** ergänzt und in das API-Routing integriert.
+- Persistenz für Payment-/Mahnwesen erweitert:
+  - `billing_payment_links` (Provider-abstrakte Zahlungslinks mit Statusmodell)
+  - `billing_payments` (Voll-/Teilzahlungen inkl. Gebühren, Skonto/Discount und Restforderung)
+  - `billing_dunning_configs`, `billing_dunning_cases`, `billing_dunning_events` (konfigurierbarer Mahnworkflow inkl. Stufenhistorie)
+  - `tenant_bank_accounts` (IBAN/BIC/Bankdaten + QR-IBAN-Flag pro Tenant)
+- Neue API-Endpunkte für Phase-2-Workflows ergänzt:
+  - Zahlungslinks: `GET|POST /api/billing/documents/{id}/payment-links`
+  - Zahlungseingänge: `GET|POST /api/billing/documents/{id}/payments`
+  - Mahnwesen: `GET|PUT /api/billing/dunning/config`, `POST /api/billing/dunning/run`, `GET /api/billing/dunning/cases`
+  - Bankdaten: `GET|PUT /api/billing/bank-account`
+- Fachlogik in `BillingPaymentsService` implementiert:
+  - Provider-neutrale Zahlungslink-Erstellung (Stripe-first, PayPal-kompatibel)
+  - Deterministische Restforderungsberechnung unter Berücksichtigung von Gebühren und Skonto
+  - Automatische Dokumentstatus-Fortschreibung auf Basis des Zahlungssaldos
+  - Konfigurierbare Mahngebühren, Zinssatz und Karenzzeit je Tenant
+
+**Abnahme-Status Phase 2:** Der Forderungsprozess ist als MVP+ technisch abgedeckt: von Zahlungslink über Teil-/Vollzahlung bis zur automatisierten Mahnstufe mit tenant-spezifischen Regeln und Bank-/SEPA-Stammdaten.
+

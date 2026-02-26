@@ -34,6 +34,12 @@ Senior-Level Starter für eine **Flutter Web/Android/iOS App** mit **PHP 8.5 Bac
 - CRUD-Basis-UI gegen Backend API.
 - Admin-Bereich mit Plugin-Lifecycle UI (tenant-spezifisches Aktivieren/Deaktivieren).
 - Admin-Rechteverwaltung für Role-Permissions im Tenant-Kontext.
+- Billing Payments & Mahnwesen (Phase 2 MVP+):
+  - Zahlungslinks pro Dokument (provider-neutral: Stripe/PayPal-ready).
+  - Zahlungseingänge inkl. Teilzahlungen, Gebühren, Skonto und Restforderung.
+  - Konfigurierbares Mahnwesen (Karenzzeit, 1./2./3. Mahnstufe, Gebühren, Verzugszins).
+  - Tenant-Bankdaten (IBAN/BIC/Bankname) inkl. QR-IBAN-Flag für PDF-Anreicherung.
+
 
 ## Projekt starten
 
@@ -50,6 +56,20 @@ cd flutter_app
 flutter pub get
 flutter run -d chrome
 ```
+
+
+
+### Neue Billing-Phase-2 API-Endpunkte (Payments & Mahnwesen)
+- `GET /api/billing/documents/{id}/payment-links`
+- `POST /api/billing/documents/{id}/payment-links`
+- `GET /api/billing/documents/{id}/payments`
+- `POST /api/billing/documents/{id}/payments`
+- `GET /api/billing/dunning/config`
+- `PUT /api/billing/dunning/config`
+- `POST /api/billing/dunning/run`
+- `GET /api/billing/dunning/cases`
+- `GET /api/billing/bank-account`
+- `PUT /api/billing/bank-account`
 
 ## Schritt-für-Schritt Dokumentation
 Siehe: `docs/IMPLEMENTATION_PROGRESS.md`
