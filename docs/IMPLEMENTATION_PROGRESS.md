@@ -730,3 +730,16 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - `backend/tests/Regression/org_management_role_capability_map_regression_test.php` auf Seed-Verhalten (`vertrieb`) erweitert.
 
 **Fortschrittsstatus Phase 7:** Der Backlogpunkt „Default-Rollenprofile als tenant-spezifische Seeds und UI-Matrix im Org-Management“ ist umgesetzt und regressionsseitig abgesichert. Nächster Ausbau: Audit-Log-Filter/Export-UX in der Org-Management-Maske vertiefen.
+
+## Schritt 41 – PLUGIN_ROADMAP Phase 7 (Audit-Log-UX Filter/Export-Flow) im Org-Management vervollständigt
+- **Org-Management API** für Audit-Logs erweitert:
+  - `GET /api/org/audit-logs` unterstützt nun Filter auf `company_id`, `actor_id`, `action_key`, `status`, `from`, `to` sowie `limit`.
+  - `POST /api/org/audit-logs/export` nutzt dieselben Filterkriterien und gibt die angewendeten Filter im Export-Metadatenblock zurück.
+- **Request-Core** ergänzt um Query-Parameter-Parsing (`Request::query()`), damit Controller-Filter konsistent über URL-Parameter aufgelöst werden.
+- **Flutter Admin-UI (Org-Management Bereich)** um eine vollständige Audit-Log UX erweitert:
+  - Filterfelder (Company, Actor, Action, Status, Zeitfenster, Limit)
+  - Tabellenansicht der gefilterten Audit-Events
+  - CSV-Export-Flow inkl. Ergebnis-Feedback (Dateiname/Zeilenanzahl)
+- **Regressionstest** ergänzt für Filter-/Export-Verhalten von Org-Management Audit-Logs (`backend/tests/Regression/org_management_audit_log_filter_export_regression_test.php`).
+
+**Zwischenfazit Phase 7:** Der geforderte Audit-Log-Flow (Filter + Export) ist in API und Org-Management-UI umgesetzt; Governance-relevante Einsicht und Datenmitnahme sind tenant-sicher bedienbar.

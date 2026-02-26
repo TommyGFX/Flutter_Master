@@ -16,6 +16,22 @@ final class Request
         return parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     }
 
+
+    public function query(?string $key = null): mixed
+    {
+        $queryString = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY);
+        if (!is_string($queryString) || $queryString === '') {
+            return $key === null ? [] : null;
+        }
+
+        parse_str($queryString, $params);
+        if ($key === null) {
+            return $params;
+        }
+
+        return $params[$key] ?? null;
+    }
+
     public function json(): array
     {
         $raw = file_get_contents('php://input') ?: '{}';

@@ -193,7 +193,14 @@ final class OrgManagementController
             return;
         }
 
-        $companyId = trim((string) ($request->query('company_id') ?? ''));
+        $filters = $this->collectAuditFilters([
+            'company_id' => $request->query('company_id'),
+            'action_key' => $request->query('action_key'),
+            'actor_id' => $request->query('actor_id'),
+            'status' => $request->query('status'),
+            'from' => $request->query('from'),
+            'to' => $request->query('to'),
+        ]);
         $limit = max(1, min(200, (int) ($request->query('limit') ?? '100')));
 
         $sql = 'SELECT id, tenant_id, company_id, actor_id, action_key, target_type, target_id, status, metadata_json, ip_address, user_agent, created_at
@@ -201,10 +208,7 @@ final class OrgManagementController
                 WHERE tenant_id = :tenant_id';
         $params = ['tenant_id' => $tenantId];
 
-        if ($companyId !== '') {
-            $sql .= ' AND company_id = :company_id';
-            $params['company_id'] = $companyId;
-        }
+        [$sql, $params] = $this->applyAuditFilters($sql, $params, $filters);
 
         $sql .= ' ORDER BY created_at DESC LIMIT :limit';
         $stmt = Database::connection()->prepare($sql);
@@ -225,16 +229,25 @@ final class OrgManagementController
             return;
         }
 
-        $companyId = trim((string) ($request->json()['company_id'] ?? ''));
+        $payload = $request->json();
+        if ($payload === []) {
+            $payload = [
+                'company_id' => $request->query('company_id'),
+                'action_key' => $request->query('action_key'),
+                'actor_id' => $request->query('actor_id'),
+                'status' => $request->query('status'),
+                'from' => $request->query('from'),
+                'to' => $request->query('to'),
+            ];
+        }
+        $filters = $this->collectAuditFilters($payload);
+
         $sql = 'SELECT id, tenant_id, company_id, actor_id, action_key, target_type, target_id, status, ip_address, user_agent, created_at
                 FROM audit_logs
                 WHERE tenant_id = :tenant_id';
         $params = ['tenant_id' => $tenantId];
 
-        if ($companyId !== '') {
-            $sql .= ' AND company_id = :company_id';
-            $params['company_id'] = $companyId;
-        }
+        [$sql, $params] = $this->applyAuditFilters($sql, $params, $filters);
 
         $sql .= ' ORDER BY created_at DESC';
         $stmt = Database::connection()->prepare($sql);
@@ -264,8 +277,67 @@ final class OrgManagementController
                 'filename' => 'audit_logs_' . date('Ymd_His') . '.csv',
                 'content' => implode("\n", $csvLines),
                 'rows' => count($rows),
+                'filters' => $filters,
             ],
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $source
+     * @return array<string, string>
+     */
+    private function collectAuditFilters(array $source): array
+    {
+        $filters = [
+            'company_id' => trim((string) ($source['company_id'] ?? '')),
+            'action_key' => trim((string) ($source['action_key'] ?? '')),
+            'actor_id' => trim((string) ($source['actor_id'] ?? '')),
+            'status' => trim((string) ($source['status'] ?? '')),
+            'from' => trim((string) ($source['from'] ?? '')),
+            'to' => trim((string) ($source['to'] ?? '')),
+        ];
+
+        return array_filter($filters, static fn (string $value): bool => $value !== '');
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param array<string, string> $filters
+     * @return array{0:string,1:array<string,mixed>}
+     */
+    private function applyAuditFilters(string $sql, array $params, array $filters): array
+    {
+        if (isset($filters['company_id'])) {
+            $sql .= ' AND company_id = :company_id';
+            $params['company_id'] = $filters['company_id'];
+        }
+
+        if (isset($filters['action_key'])) {
+            $sql .= ' AND action_key = :action_key';
+            $params['action_key'] = $filters['action_key'];
+        }
+
+        if (isset($filters['actor_id'])) {
+            $sql .= ' AND actor_id = :actor_id';
+            $params['actor_id'] = $filters['actor_id'];
+        }
+
+        if (isset($filters['status'])) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        if (isset($filters['from'])) {
+            $sql .= ' AND created_at >= :from_date';
+            $params['from_date'] = $filters['from'];
+        }
+
+        if (isset($filters['to'])) {
+            $sql .= ' AND created_at <= :to_date';
+            $params['to_date'] = $filters['to'];
+        }
+
+        return [$sql, $params];
     }
 
     private function tenantId(Request $request): ?string
