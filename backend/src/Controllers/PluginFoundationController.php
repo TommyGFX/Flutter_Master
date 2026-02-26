@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
 use App\Plugin\PluginContract;
+use App\Plugin\PluginNavigationContract;
 use App\Services\DomainEventService;
 use App\Services\RbacService;
 use InvalidArgumentException;
@@ -40,14 +41,14 @@ final class PluginFoundationController
         $navigation = [];
         foreach ($stmt->fetchAll() ?: [] as $row) {
             $requiredPermissions = $this->decodeJsonList($row['required_permissions_json'] ?? null);
-            if (!$this->hasCapabilityAccess($permissions, $requiredPermissions)) {
+            if (!PluginNavigationContract::hasCapabilityAccess($permissions, $requiredPermissions)) {
                 continue;
             }
 
             $lifecycleStatus = (string) ($row['lifecycle_status'] ?? 'installed');
             $isEnabled = $lifecycleStatus === 'enabled';
             $isActive = (bool) ($row['is_active'] ?? false);
-            $isVisible = $isEnabled && $isActive;
+            $isVisible = PluginNavigationContract::isVisibleInNavigation($lifecycleStatus, $isActive);
 
             $capabilities = $this->decodeJsonList($row['capabilities_json'] ?? null);
 
@@ -289,21 +290,6 @@ final class PluginFoundationController
             static fn (mixed $item): string => is_string($item) ? trim($item) : '',
             $decoded
         )));
-    }
-
-    private function hasCapabilityAccess(array $grantedPermissions, array $requiredPermissions): bool
-    {
-        if (in_array('*', $grantedPermissions, true) || $requiredPermissions === []) {
-            return true;
-        }
-
-        foreach ($requiredPermissions as $requiredPermission) {
-            if (!in_array($requiredPermission, $grantedPermissions, true)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private function pluginDisplayName(string $pluginKey): string
