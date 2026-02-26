@@ -277,3 +277,22 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Retry-Logik bis max. 3 Versuche mit Eskalation in Payment-Method-Update-Flow.
 
 **Abnahme-Status Phase 4:** Der Abo-Cashflow ist als Backend-MVP umgesetzt (Plan/Vertrag -> Recurring Invoice -> Versandqueue -> Retry/Retention). Als nächster Schritt folgen Provider-spezifische Payment-Method-Update-Completion Hooks und UI-Flows im Flutter-Admin.
+
+## Schritt 21 – PLUGIN_ROADMAP Phase 5 (E-Mail & Versand) gestartet (Backend-MVP)
+- Neues Backend-Plugin-Modul **`document_delivery`** ergänzt und in das API-Routing integriert.
+- Persistenz für Zustellung und Versandkanäle erweitert:
+  - `document_delivery_templates` (mehrsprachige Kanal-Templates inkl. Variablen-/Anhangsmetadaten)
+  - `document_delivery_provider_configs` (SMTP/SendGrid/Mailgun Tenant-Konfiguration)
+  - `document_delivery_tracking_events` (optionales Mail-Open/Link-Click-Tracking)
+- Neue API-Endpunkte für Phase-5-Workflows ergänzt:
+  - Template-Verwaltung: `GET /api/billing/delivery/templates`, `PUT /api/billing/delivery/templates/{templateKey}`
+  - Provider-Konfiguration: `GET|PUT /api/billing/delivery/provider`
+  - Kundenportal-Dokumente: `GET /api/portal/documents`, `GET /api/portal/documents/{id}`
+  - Tracking-Ereignisse: `POST /api/billing/delivery/tracking/events`
+- Fachlogik in `DocumentDeliveryService` implementiert:
+  - Mehrsprachige Vorlagen mit kanalabhängigen Inhalten (E-Mail/Portal).
+  - Tenant-spezifische Versandprovider-Abstraktion (SMTP, SendGrid, Mailgun).
+  - Portal-Self-Service-Zugriff auf Dokumente inkl. zugeordneter Zahlungsoptionen.
+  - Datenschutzfreundliches, optionales Event-Tracking auf Message-/Template-Ebene.
+
+**Abnahme-Status Phase 5:** Der digitale Zustellprozess ist als Backend-MVP implementiert (Template/Provider/Portal/Tracking). Für die vollständige Abnahme folgen ein Delivery-Worker mit Retry/Provider-Dispatch und die Flutter-Portal-UI für Endnutzer.

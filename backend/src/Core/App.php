@@ -12,6 +12,7 @@ use App\Controllers\BillingCoreController;
 use App\Controllers\BillingPaymentsController;
 use App\Controllers\TaxComplianceDeController;
 use App\Controllers\SubscriptionsBillingController;
+use App\Controllers\DocumentDeliveryController;
 use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
@@ -25,6 +26,7 @@ use App\Services\BillingCoreService;
 use App\Services\BillingPaymentsService;
 use App\Services\TaxComplianceDeService;
 use App\Services\SubscriptionsBillingService;
+use App\Services\DocumentDeliveryService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
@@ -58,6 +60,7 @@ final class App
         $billingPayments = new BillingPaymentsController(new BillingPaymentsService(Database::connection()));
         $taxComplianceDe = new TaxComplianceDeController(new TaxComplianceDeService(Database::connection(), new BillingCoreService(Database::connection())));
         $subscriptionsBilling = new SubscriptionsBillingController(new SubscriptionsBillingService(Database::connection()));
+        $documentDelivery = new DocumentDeliveryController(new DocumentDeliveryService(Database::connection()));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -154,6 +157,14 @@ final class App
         $router->add('POST', '/api/billing/subscriptions/auto-invoicing/run', [$subscriptionsBilling, 'runAutoInvoicing']);
         $router->add('POST', '/api/billing/subscriptions/dunning/run', [$subscriptionsBilling, 'runDunningRetention']);
         $router->add('POST', '/api/billing/subscriptions/contracts/{id}/payment-method-update-link', [$subscriptionsBilling, 'createPaymentMethodUpdateLink']);
+
+        $router->add('GET', '/api/billing/delivery/templates', [$documentDelivery, 'listTemplates']);
+        $router->add('PUT', '/api/billing/delivery/templates/{templateKey}', [$documentDelivery, 'upsertTemplate']);
+        $router->add('GET', '/api/billing/delivery/provider', [$documentDelivery, 'getProviderConfig']);
+        $router->add('PUT', '/api/billing/delivery/provider', [$documentDelivery, 'upsertProviderConfig']);
+        $router->add('GET', '/api/portal/documents', [$documentDelivery, 'listPortalDocuments']);
+        $router->add('GET', '/api/portal/documents/{id}', [$documentDelivery, 'getPortalDocument']);
+        $router->add('POST', '/api/billing/delivery/tracking/events', [$documentDelivery, 'trackEvent']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);

@@ -43,6 +43,12 @@ Kopiere `.env.example` nach `.env` und passe DB/Stripe/SMTP Werte an.
 - `GET|POST|PUT|DELETE /api/admin/users`
 - `GET|POST|PUT|DELETE /api/customers`
 - `GET|PUT /api/self/profile`
+- `GET /api/billing/delivery/templates`
+- `PUT /api/billing/delivery/templates/{templateKey}`
+- `GET|PUT /api/billing/delivery/provider`
+- `GET /api/portal/documents`
+- `GET /api/portal/documents/{id}`
+- `POST /api/billing/delivery/tracking/events`
 
 
 ## Auth Hinweise
@@ -200,3 +206,10 @@ Diese Endpunkte sind **plattformweit** und nur mit gültigem Superadmin-JWT nutz
 ### Relevante Header
 - `X-Tenant-Id`: Tenant-Kontext (Pflicht)
 - `X-User-Id`: Aktor-ID aus `tenant_accounts` (Pflicht)
+
+
+## Document Delivery (Roadmap Phase 5)
+- Mehrsprachige Templates pro Kanal (`email`, `portal`) über `document_delivery_templates`.
+- Tenant-Providerkonfiguration für `smtp`, `sendgrid`, `mailgun` über `document_delivery_provider_configs`.
+- Kundenportal liest tenant-sichere Dokumente aus Billing und liefert vorhandene Zahlungslinks mit aus.
+- Optionales Tracking erfasst `mail_open`/`link_click` in `document_delivery_tracking_events`.
