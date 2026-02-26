@@ -9,6 +9,46 @@ use RuntimeException;
 
 final class OrgManagementService
 {
+    /** @var array<string, array{name: string, permissions: array<int, string>}> */
+    private const DEFAULT_ROLE_PROFILES = [
+        'admin' => [
+            'name' => 'Admin',
+            'permissions' => ['*'],
+        ],
+        'buchhaltung' => [
+            'name' => 'Buchhaltung',
+            'permissions' => [
+                'billing.read',
+                'billing.write',
+                'billing.payments.manage',
+                'finance.read',
+                'finance.export',
+                'customers.read',
+                'customers.manage',
+                'org.read',
+                'audit.read',
+            ],
+        ],
+        'vertrieb' => [
+            'name' => 'Vertrieb',
+            'permissions' => [
+                'billing.read',
+                'billing.write',
+                'customers.read',
+                'customers.manage',
+                'org.read',
+            ],
+        ],
+        'readonly' => [
+            'name' => 'Read-only',
+            'permissions' => [
+                'billing.read',
+                'customers.read',
+                'org.read',
+            ],
+        ],
+    ];
+
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -168,6 +208,8 @@ final class OrgManagementService
     /** @return array<int, array<string, mixed>> */
     public function listRoles(string $tenantId): array
     {
+        $this->seedDefaultRoleProfiles($tenantId);
+
         $stmt = $this->pdo->prepare(
             'SELECT r.role_key, r.name, GROUP_CONCAT(rp.permission_key) AS permissions
              FROM roles r
@@ -189,6 +231,79 @@ final class OrgManagementService
                 'permissions' => $permissions === '' ? [] : explode(',', $permissions),
             ];
         }, $rows);
+    }
+
+    private function seedDefaultRoleProfiles(string $tenantId): void
+    {
+        $keys = array_keys(self::DEFAULT_ROLE_PROFILES);
+        if ($keys === []) {
+            return;
+        }
+
+        $placeholder = implode(',', array_fill(0, count($keys), '?'));
+        $select = $this->pdo->prepare(
+            "SELECT role_key FROM roles WHERE tenant_id = ? AND role_key IN ($placeholder)"
+        );
+        $select->execute(array_merge([$tenantId], $keys));
+        $existing = array_map(
+            static fn (array $row): string => (string) ($row['role_key'] ?? ''),
+            $select->fetchAll() ?: []
+        );
+        $existingMap = array_fill_keys($existing, true);
+
+        $missing = array_values(array_filter($keys, static fn (string $key): bool => !isset($existingMap[$key])));
+        if ($missing === []) {
+            return;
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $insertRole = $this->pdo->prepare(
+                'INSERT INTO roles (tenant_id, role_key, name)
+                 VALUES (:tenant_id, :role_key, :name)'
+            );
+            $insertPermission = $this->pdo->prepare(
+                'INSERT INTO role_permissions (tenant_id, role_key, permission_key)
+                 VALUES (:tenant_id, :role_key, :permission_key)'
+            );
+
+            foreach ($missing as $roleKey) {
+                $profile = self::DEFAULT_ROLE_PROFILES[$roleKey] ?? null;
+                if (!is_array($profile)) {
+                    continue;
+                }
+
+                $insertRole->execute([
+                    'tenant_id' => $tenantId,
+                    'role_key' => $roleKey,
+                    'name' => (string) ($profile['name'] ?? strtoupper($roleKey)),
+                ]);
+
+                $permissions = $profile['permissions'] ?? [];
+                if (!is_array($permissions)) {
+                    $permissions = [];
+                }
+
+                foreach ($permissions as $permission) {
+                    if (!is_string($permission) || trim($permission) === '') {
+                        continue;
+                    }
+
+                    $insertPermission->execute([
+                        'tenant_id' => $tenantId,
+                        'role_key' => $roleKey,
+                        'permission_key' => trim($permission),
+                    ]);
+                }
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $exception;
+        }
     }
 
     public function upsertRole(string $tenantId, string $roleKeyInput, array $payload): array

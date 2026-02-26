@@ -50,7 +50,7 @@ VALUES
 $service = new OrgManagementService($pdo);
 $map = $service->listRoleCapabilityMap('tenant_1');
 
-assertSameValue(3, count($map), 'Expected one capability mapping entry per role.');
+assertSameValue(4, count($map), 'Expected default seeded roles plus existing tenant roles.');
 
 $byRole = [];
 foreach ($map as $entry) {
@@ -60,6 +60,9 @@ foreach ($map as $entry) {
 assertSameValue(2, count($byRole['admin']['plugin_capabilities'] ?? []), 'Admin should see all enabled plugin capabilities.');
 assertSameValue(2, count($byRole['buchhaltung']['plugin_capabilities'] ?? []), 'Buchhaltung should see billing and payment capabilities.');
 assertSameValue(1, count($byRole['readonly']['plugin_capabilities'] ?? []), 'Read-only should only see billing_core capabilities.');
+
+assertSameValue(true, isset($byRole['vertrieb']), 'Vertrieb default profile should be seeded for the tenant.');
+assertSameValue(1, count($byRole['vertrieb']['plugin_capabilities'] ?? []), 'Vertrieb should see only billing_core capabilities with current plugin requirements.');
 
 $readonlyPlugin = $byRole['readonly']['plugin_capabilities'][0]['plugin_key'] ?? null;
 assertSameValue('billing_core', $readonlyPlugin, 'Read-only plugin capability mapping mismatch.');
