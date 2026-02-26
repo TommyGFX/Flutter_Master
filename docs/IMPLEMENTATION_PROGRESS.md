@@ -400,3 +400,17 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 
 **Abnahme-Status Schritt 27:** Die Contract-Regeln für Plugin-Metadaten, Hook-Whitelist und Lifecycle-Transitions sind testseitig vertieft und nachvollziehbar abgesichert.
 
+
+## Schritt 21 – Review Phase 0 abgeschlossen + Phase 1 Flutter Billing UI/E2E-Flow vervollständigt
+- **Phase 0 Review:** Abnahmekriterien erneut geprüft und als abgeschlossen markiert (Plugin-Contract, Lifecycle-/Navigation-Contracts, UI/API-Sichtbarkeit inkl. Tests).
+- **Flutter Admin-Dashboard** um einen dedizierten Bereich **"Billing E2E (Phase 1)"** erweitert.
+- Neuer orchestrierter UI-Flow für **Angebot -> bezahlt** implementiert:
+  - Kunde sicherstellen/anlegen
+  - Angebot erstellen und finalisieren
+  - Angebot in Rechnung konvertieren und Rechnung finalisieren
+  - Payment-Link erstellen und Zahlung verbuchen
+  - Historie und PDF-Export als Abschlussprüfung laden
+- Flow-Ergebnisse werden in der UI als Kennzahlen + Timeline pro Schritt angezeigt.
+- Testabdeckung erweitert: `billing_flow_controller_test.dart` prüft den E2E-Orchestrierungsablauf deterministisch über ein Repository-Double.
+
+**Aktueller Status:** Phase 0 abgeschlossen; Phase 1 UI/E2E-Umsetzung ist funktional vervollständigt und für produktive Härtung vorbereitet.
