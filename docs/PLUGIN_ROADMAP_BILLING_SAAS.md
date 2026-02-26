@@ -28,7 +28,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 - Einheitliche Plugin-Navigation im Admin-Dashboard.
 - Capability-basierte Sichtbarkeit (RBAC + Plugin aktiviert).
 
-**Abnahme Phase 0:** Plugins können sauber registriert, aktiviert und in UI/API sichtbar gemacht werden.
+**Abnahme Phase 0:** Plugins können sauber registriert, aktiviert und in UI/API sichtbar gemacht werden. ✅ **Abgeschlossen**
 
 
 ### Fortschritt (Phase 0 – Abnahmeabsicherung)
@@ -74,6 +74,11 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 - Änderungsprotokoll je Dokument.
 
 **Abnahme Phase 1:** End-to-End Flow von Angebot bis bezahlter Rechnung inkl. PDF und Historie.
+
+### Fortschritt (Phase 1 – Billing-Flow produktiv härten)
+- [x] Error-Handling im Flutter-Billing-Flow um kontextbezogene API-Fehlermeldungen (inkl. HTTP-Status/Backend-Message) erweitert.
+- [x] UX-Polish umgesetzt (Status-Banner, Timeline mit Erfolgs-/Fehlerindikatoren, Empty-State).
+- [x] Golden-Test für Billing-Flow-Screen ergänzt (`billing_flow_screen_golden_test.dart`).
 
 ---
 
