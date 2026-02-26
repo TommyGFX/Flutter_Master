@@ -389,3 +389,14 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Datei: `backend/tests/Contract/plugin_contract_test.php`.
 
 **Abnahme-Status:** Der nächste konkrete Schritt aus Phase 0 („Contract-Tests für Plugin-Metadaten, Hook-Whitelist und Lifecycle-Transitions ergänzen“) ist umgesetzt und testbar dokumentiert.
+
+## Schritt 27 – PLUGIN_ROADMAP Phase 0 Contract-Tests vertieft (abgeschlossen)
+- Contract-Testskript `backend/tests/Contract/plugin_contract_test.php` erweitert, um die schriftlich fixierten Regeln aus Phase 0.1 ausführbarer zu validieren.
+- Ergänzte Testabdeckung:
+  - zusätzliche positive/negative Metadaten-Fälle (Key/Version/Capabilities/Permissions),
+  - exakte Hook-Whitelist-Absicherung inkl. strikter String-Matches,
+  - Lifecycle-Status- und Transition-Checks für erlaubte wie verbotene Übergänge.
+- Damit ist der in der Roadmap ausgewiesene nächste Schritt für Phase 0 („Contract-Tests ergänzen“) umgesetzt und als Regression-Guard im Backend verankert.
+
+**Abnahme-Status Schritt 27:** Die Contract-Regeln für Plugin-Metadaten, Hook-Whitelist und Lifecycle-Transitions sind testseitig vertieft und nachvollziehbar abgesichert.
+
