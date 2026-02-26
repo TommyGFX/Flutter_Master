@@ -169,7 +169,7 @@ final class OrgManagementService
     public function listRoles(string $tenantId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT r.role_key, r.name, GROUP_CONCAT(rp.permission_key ORDER BY rp.permission_key SEPARATOR ",") AS permissions
+            'SELECT r.role_key, r.name, GROUP_CONCAT(rp.permission_key) AS permissions
              FROM roles r
              LEFT JOIN role_permissions rp
                 ON rp.tenant_id = r.tenant_id
@@ -255,6 +255,64 @@ final class OrgManagementService
         ];
     }
 
+    /** @return array<int, array<string, mixed>> */
+    public function listRoleCapabilityMap(string $tenantId): array
+    {
+        $roles = $this->listRoles($tenantId);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT plugin_key, display_name, lifecycle_status, is_active, capabilities_json, required_permissions_json
+             FROM tenant_plugins
+             WHERE tenant_id = :tenant_id
+             ORDER BY display_name ASC'
+        );
+        $stmt->execute(['tenant_id' => $tenantId]);
+
+        $plugins = array_map(function (array $row): array {
+            return [
+                'plugin_key' => (string) ($row['plugin_key'] ?? ''),
+                'display_name' => (string) ($row['display_name'] ?? ''),
+                'lifecycle_status' => (string) ($row['lifecycle_status'] ?? 'installed'),
+                'is_active' => (bool) ($row['is_active'] ?? false),
+                'capabilities' => $this->decodeJsonList($row['capabilities_json'] ?? null),
+                'required_permissions' => $this->decodeJsonList($row['required_permissions_json'] ?? null),
+            ];
+        }, $stmt->fetchAll() ?: []);
+
+        return array_map(function (array $role) use ($plugins): array {
+            $permissions = $role['permissions'] ?? [];
+            if (!is_array($permissions)) {
+                $permissions = [];
+            }
+
+            $pluginCapabilities = [];
+            foreach ($plugins as $plugin) {
+                $isEnabled = ($plugin['lifecycle_status'] ?? 'installed') === 'enabled' && (bool) ($plugin['is_active'] ?? false);
+                if (!$isEnabled) {
+                    continue;
+                }
+
+                $requiredPermissions = $plugin['required_permissions'] ?? [];
+                if (!is_array($requiredPermissions) || !$this->permissionsCover($permissions, $requiredPermissions)) {
+                    continue;
+                }
+
+                $pluginCapabilities[] = [
+                    'plugin_key' => $plugin['plugin_key'] ?? '',
+                    'display_name' => $plugin['display_name'] ?? '',
+                    'capabilities' => $plugin['capabilities'] ?? [],
+                ];
+            }
+
+            return [
+                'role_key' => $role['role_key'] ?? '',
+                'name' => $role['name'] ?? '',
+                'permissions' => $permissions,
+                'plugin_capabilities' => $pluginCapabilities,
+            ];
+        }, $roles);
+    }
+
     /** @return array<int, string> */
     private function resolveRolePermissions(string $tenantId, string $roleKey): array
     {
@@ -297,5 +355,39 @@ final class OrgManagementService
 
         $normalized = strtolower(trim($value));
         return preg_match('/^[a-z][a-z0-9_.-]{1,62}$/', $normalized) ? $normalized : '';
+    }
+
+    /** @param array<int, string> $availablePermissions @param array<int, string> $requiredPermissions */
+    private function permissionsCover(array $availablePermissions, array $requiredPermissions): bool
+    {
+        if (in_array('*', $availablePermissions, true)) {
+            return true;
+        }
+
+        foreach ($requiredPermissions as $permission) {
+            if (!in_array($permission, $availablePermissions, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** @return array<int, string> */
+    private function decodeJsonList(mixed $value): array
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (mixed $entry): string => is_string($entry) ? trim($entry) : '',
+            $decoded
+        )));
     }
 }
