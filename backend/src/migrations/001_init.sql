@@ -600,3 +600,107 @@ CREATE TABLE IF NOT EXISTS billing_einvoice_exchange (
     INDEX idx_billing_einvoice_direction (tenant_id, exchange_direction, invoice_format, created_at),
     CONSTRAINT fk_billing_einvoice_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
 );
+
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'subscriptions_billing',
+    plan_key VARCHAR(120) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    billing_interval VARCHAR(16) NOT NULL DEFAULT 'monthly',
+    amount DECIMAL(18,2) NOT NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    term_months INT NOT NULL DEFAULT 1,
+    auto_renew TINYINT(1) NOT NULL DEFAULT 1,
+    notice_days INT NOT NULL DEFAULT 30,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_subscription_plan_key (tenant_id, plan_key),
+    INDEX idx_subscription_plans_active (tenant_id, is_active, billing_interval)
+);
+
+CREATE TABLE IF NOT EXISTS subscription_contracts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    customer_id BIGINT UNSIGNED NOT NULL,
+    plan_id BIGINT UNSIGNED NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'active',
+    current_term_start DATE NOT NULL,
+    current_term_end DATE NOT NULL,
+    cancel_at DATE NULL,
+    cancelled_at TIMESTAMP NULL,
+    payment_method_ref VARCHAR(191) NULL,
+    next_billing_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_subscription_contracts_due (tenant_id, status, next_billing_at),
+    INDEX idx_subscription_contracts_customer (tenant_id, customer_id),
+    CONSTRAINT fk_subscription_contract_customer FOREIGN KEY (customer_id) REFERENCES billing_customers (id),
+    CONSTRAINT fk_subscription_contract_plan FOREIGN KEY (plan_id) REFERENCES subscription_plans (id)
+);
+
+CREATE TABLE IF NOT EXISTS subscription_cycles (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    contract_id BIGINT UNSIGNED NOT NULL,
+    event_type VARCHAR(64) NOT NULL,
+    amount_delta DECIMAL(18,2) NOT NULL DEFAULT 0,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    metadata_json JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_subscription_cycles_contract (tenant_id, contract_id, created_at),
+    CONSTRAINT fk_subscription_cycles_contract FOREIGN KEY (contract_id) REFERENCES subscription_contracts (id)
+);
+
+CREATE TABLE IF NOT EXISTS subscription_invoices (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    contract_id BIGINT UNSIGNED NOT NULL,
+    billing_document_id BIGINT UNSIGNED NOT NULL,
+    cycle_started_at DATE NOT NULL,
+    cycle_ended_at DATE NOT NULL,
+    billed_amount DECIMAL(18,2) NOT NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    retry_attempts INT NOT NULL DEFAULT 0,
+    collection_status VARCHAR(32) NOT NULL DEFAULT 'open',
+    delivery_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    delivered_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_subscription_invoice_document (tenant_id, billing_document_id),
+    INDEX idx_subscription_invoices_status (tenant_id, collection_status, delivery_status),
+    CONSTRAINT fk_subscription_invoice_contract FOREIGN KEY (contract_id) REFERENCES subscription_contracts (id),
+    CONSTRAINT fk_subscription_invoice_document FOREIGN KEY (billing_document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS subscription_dunning_cases (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    contract_id BIGINT UNSIGNED NOT NULL,
+    billing_document_id BIGINT UNSIGNED NOT NULL,
+    retry_attempts INT NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'retrying',
+    payment_method_update_required TINYINT(1) NOT NULL DEFAULT 0,
+    last_retry_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_subscription_dunning_document (tenant_id, billing_document_id),
+    INDEX idx_subscription_dunning_contract (tenant_id, contract_id, status),
+    CONSTRAINT fk_subscription_dunning_contract FOREIGN KEY (contract_id) REFERENCES subscription_contracts (id),
+    CONSTRAINT fk_subscription_dunning_document FOREIGN KEY (billing_document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS subscription_payment_method_updates (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    contract_id BIGINT UNSIGNED NOT NULL,
+    token CHAR(32) NOT NULL,
+    update_url VARCHAR(512) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'open',
+    completed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_subscription_payment_update_token (token),
+    INDEX idx_subscription_payment_update_contract (tenant_id, contract_id, status),
+    CONSTRAINT fk_subscription_payment_update_contract FOREIGN KEY (contract_id) REFERENCES subscription_contracts (id)
+);

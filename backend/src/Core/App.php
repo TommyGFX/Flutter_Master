@@ -11,6 +11,7 @@ use App\Controllers\DocumentController;
 use App\Controllers\BillingCoreController;
 use App\Controllers\BillingPaymentsController;
 use App\Controllers\TaxComplianceDeController;
+use App\Controllers\SubscriptionsBillingController;
 use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
@@ -23,6 +24,7 @@ use App\Services\ApprovalService;
 use App\Services\BillingCoreService;
 use App\Services\BillingPaymentsService;
 use App\Services\TaxComplianceDeService;
+use App\Services\SubscriptionsBillingService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
@@ -55,6 +57,7 @@ final class App
         $billingCore = new BillingCoreController(new BillingCoreService(Database::connection()), new PdfRendererService());
         $billingPayments = new BillingPaymentsController(new BillingPaymentsService(Database::connection()));
         $taxComplianceDe = new TaxComplianceDeController(new TaxComplianceDeService(Database::connection(), new BillingCoreService(Database::connection())));
+        $subscriptionsBilling = new SubscriptionsBillingController(new SubscriptionsBillingService(Database::connection()));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -140,6 +143,17 @@ final class App
         $router->add('POST', '/api/billing/tax-compliance/documents/{id}/correction', [$taxComplianceDe, 'createCorrection']);
         $router->add('GET', '/api/billing/tax-compliance/documents/{id}/e-invoice/export', [$taxComplianceDe, 'exportEInvoice']);
         $router->add('POST', '/api/billing/tax-compliance/e-invoice/import', [$taxComplianceDe, 'importEInvoice']);
+
+        $router->add('GET', '/api/billing/subscriptions/plans', [$subscriptionsBilling, 'listPlans']);
+        $router->add('POST', '/api/billing/subscriptions/plans', [$subscriptionsBilling, 'savePlan']);
+        $router->add('GET', '/api/billing/subscriptions/contracts', [$subscriptionsBilling, 'listContracts']);
+        $router->add('POST', '/api/billing/subscriptions/contracts', [$subscriptionsBilling, 'createContract']);
+        $router->add('PUT', '/api/billing/subscriptions/contracts/{id}', [$subscriptionsBilling, 'updateContract']);
+        $router->add('POST', '/api/billing/subscriptions/contracts/{id}/change-plan', [$subscriptionsBilling, 'changePlan']);
+        $router->add('POST', '/api/billing/subscriptions/run-recurring', [$subscriptionsBilling, 'runRecurring']);
+        $router->add('POST', '/api/billing/subscriptions/auto-invoicing/run', [$subscriptionsBilling, 'runAutoInvoicing']);
+        $router->add('POST', '/api/billing/subscriptions/dunning/run', [$subscriptionsBilling, 'runDunningRetention']);
+        $router->add('POST', '/api/billing/subscriptions/contracts/{id}/payment-method-update-link', [$subscriptionsBilling, 'createPaymentMethodUpdateLink']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);
