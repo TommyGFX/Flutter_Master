@@ -39,6 +39,8 @@ final class App
         $router->add('POST', '/api/upload/image', [$upload, 'uploadImage']);
         $router->add('POST', '/api/upload/file', [$upload, 'uploadFile']);
 
+        $router->add('POST', '/api/stripe/checkout-session', [$stripe, 'createCheckoutSession']);
+        $router->add('POST', '/api/stripe/customer-portal', [$stripe, 'createCustomerPortalSession']);
         $router->add('POST', '/api/stripe/webhook', [$stripe, 'webhook']);
 
         $router->dispatch($request);

@@ -15,7 +15,9 @@ Senior-Level Starter für eine **Flutter Web/Android/iOS App** mit **PHP 8.5 Bac
 - Plugin-System Grundstruktur (DB-basierte Plugin-Routen + Hooks).
 - CRUD API (`/api/crud/{resource}`) mit Tenant-Isolation via Header.
 - Upload-Endpunkte für Bild und Dateien inkl. MIME-Prüfung.
-- Stripe Webhook Endpunkt als Integrationsbasis.
+- Stripe Checkout Session Endpoint inkl. konfigurierbarer Success/Cancel-URLs.
+- Stripe Customer Portal Session Endpoint für Self-Service Billing.
+- Stripe Webhook Endpunkt mit optionaler Signaturprüfung (`STRIPE_WEBHOOK_SECRET`).
 - Email Queue Basisklasse.
 - SQL Migrationen für Multi-Tenant/Rollen/Plugins/Templates/Queue.
 
@@ -54,7 +56,7 @@ Siehe: `docs/IMPLEMENTATION_PROGRESS.md`
 Dies ist ein robuster **Starter** mit sauberer Architektur und Kern-Skeletten für alle geforderten Features.
 Für produktiven Einsatz sollten als nächste Schritte u. a. implementiert werden:
 - echtes JWT/Refresh Token Handling mit Rotationen,
-- vollständige Stripe Checkout/Plan/Subscription-Flows,
+- Domain-spezifische Stripe Webhook-Persistenz (Provisionierung, Rechnungslauf, Dunning),
 - SMTP Versand & Queue Worker,
 - PDF Rendering Engine,
 - vollständiges RBAC + Plugin Lifecycle UI.
