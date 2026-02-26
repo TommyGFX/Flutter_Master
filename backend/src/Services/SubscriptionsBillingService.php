@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Services\SubscriptionsBilling\PaymentMethodUpdateProviderRegistry;
 use DateTimeImmutable;
 use PDO;
 use RuntimeException;
 
 final class SubscriptionsBillingService
 {
-    public function __construct(private readonly PDO $pdo)
-    {
+    public function __construct(
+        private readonly PDO $pdo,
+        private readonly ?PaymentMethodUpdateProviderRegistry $paymentMethodProviderRegistry = null,
+    ) {
     }
 
     public function listPlans(string $tenantId): array
@@ -412,33 +415,40 @@ final class SubscriptionsBillingService
         return ['checked' => count($rows), 'resolved' => $resolved, 'retried' => $retried];
     }
 
-    public function createPaymentMethodUpdateLink(string $tenantId, int $contractId): array
+    public function createPaymentMethodUpdateLink(string $tenantId, int $contractId, array $payload = []): array
     {
         $contract = $this->findContract($tenantId, $contractId);
         if ($contract === null) {
             throw new RuntimeException('contract_not_found');
         }
 
+        $provider = strtolower(trim((string) ($payload['provider'] ?? 'stripe')));
         $token = bin2hex(random_bytes(16));
-        $url = 'https://crm.ordentis.de/billing/payment-method-update?contract=' . $contractId . '&token=' . $token;
+
+        $registry = $this->paymentMethodProviderRegistry ?? new PaymentMethodUpdateProviderRegistry([]);
+        $adapter = $registry->resolve($provider);
+        $resolvedLink = $adapter->createUpdateLink($tenantId, $contractId, $token, $contract, $payload);
 
         $stmt = $this->pdo->prepare(
-            'INSERT INTO subscription_payment_method_updates (tenant_id, contract_id, token, update_url, status)
-             VALUES (:tenant_id, :contract_id, :token, :update_url, :status)'
+            'INSERT INTO subscription_payment_method_updates (tenant_id, contract_id, provider, token, update_url, status)
+             VALUES (:tenant_id, :contract_id, :provider, :token, :update_url, :status)'
         );
         $stmt->execute([
             ':tenant_id' => $tenantId,
             ':contract_id' => $contractId,
+            ':provider' => $provider,
             ':token' => $token,
-            ':update_url' => $url,
-            ':status' => 'open',
+            ':update_url' => $resolvedLink['update_url'],
+            ':status' => $resolvedLink['status'],
         ]);
 
         return [
             'contract_id' => $contractId,
+            'provider' => $provider,
             'token' => $token,
-            'update_url' => $url,
-            'status' => 'open',
+            'update_url' => $resolvedLink['update_url'],
+            'status' => $resolvedLink['status'],
+            'provider_response_json' => $resolvedLink['provider_response_json'],
         ];
     }
 

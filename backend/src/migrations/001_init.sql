@@ -704,6 +704,7 @@ CREATE TABLE IF NOT EXISTS subscription_payment_method_updates (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL,
     contract_id BIGINT UNSIGNED NOT NULL,
+    provider VARCHAR(32) NOT NULL DEFAULT 'stripe',
     token CHAR(32) NOT NULL,
     update_url VARCHAR(512) NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'open',

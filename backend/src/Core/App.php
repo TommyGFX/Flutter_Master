@@ -42,6 +42,9 @@ use App\Services\TenantMailerService;
 use App\Services\AutomationIntegrationsService;
 use App\Services\CatalogPricingService;
 use App\Services\PlatformSecurityOpsService;
+use App\Services\SubscriptionsBilling\PayPalPaymentMethodUpdateProviderAdapter;
+use App\Services\SubscriptionsBilling\PaymentMethodUpdateProviderRegistry;
+use App\Services\SubscriptionsBilling\StripePaymentMethodUpdateProviderAdapter;
 
 final class App
 {
@@ -69,7 +72,11 @@ final class App
         $billingCore = new BillingCoreController(new BillingCoreService(Database::connection()), new PdfRendererService());
         $billingPayments = new BillingPaymentsController(new BillingPaymentsService(Database::connection()));
         $taxComplianceDe = new TaxComplianceDeController(new TaxComplianceDeService(Database::connection(), new BillingCoreService(Database::connection())));
-        $subscriptionsBilling = new SubscriptionsBillingController(new SubscriptionsBillingService(Database::connection()));
+        $subscriptionsPaymentMethodProviders = new PaymentMethodUpdateProviderRegistry([
+            new StripePaymentMethodUpdateProviderAdapter(),
+            new PayPalPaymentMethodUpdateProviderAdapter(),
+        ]);
+        $subscriptionsBilling = new SubscriptionsBillingController(new SubscriptionsBillingService(Database::connection(), $subscriptionsPaymentMethodProviders));
         $documentDelivery = new DocumentDeliveryController(new DocumentDeliveryService(Database::connection()));
         $financeReporting = new FinanceReportingController(new FinanceReportingService(Database::connection()));
         $orgManagement = new OrgManagementController(new OrgManagementService(Database::connection()), new RbacService(), new AuditLogService());
@@ -255,14 +262,8 @@ final class App
 
     private function applyCors(Request $request): void
     {
-        $allowedOrigins = [
-            'https://crm.ordentis.de',
-            'http://localhost:3000',
-            'http://localhost:5173',
-        ];
-
         $origin = $request->header('Origin');
-        if ($origin !== null && in_array($origin, $allowedOrigins, true)) {
+        if (is_string($origin) && $this->isAllowedCorsOrigin($origin)) {
             header('Access-Control-Allow-Origin: ' . $origin);
             header('Vary: Origin');
         }
@@ -270,5 +271,26 @@ final class App
         header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-Id, X-Company-Id, X-User-Id, X-Permissions, X-Approval-Status, Stripe-Signature');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Credentials: true');
+    }
+
+    private function isAllowedCorsOrigin(string $origin): bool
+    {
+        $normalizedOrigin = strtolower(trim($origin));
+
+        $explicitOrigins = [
+            'https://crm.ordentis.de',
+            'https://api.ordentis.de',
+            'http://localhost:3000',
+            'http://localhost:5173',
+        ];
+        if (in_array($normalizedOrigin, $explicitOrigins, true)) {
+            return true;
+        }
+
+        if (preg_match('/^https:\/\/[a-z0-9-]+\.ordentis\.de(?::\d+)?$/', $normalizedOrigin) === 1) {
+            return true;
+        }
+
+        return preg_match('/^http:\/\/localhost(?::\d+)?$/', $normalizedOrigin) === 1;
     }
 }

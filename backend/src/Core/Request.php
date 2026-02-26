@@ -24,8 +24,34 @@ final class Request
 
     public function header(string $name): ?string
     {
-        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
-        return $_SERVER[$key] ?? null;
+        $normalized = strtoupper(str_replace('-', '_', $name));
+        $candidates = [
+            'HTTP_' . $normalized,
+            $normalized,
+            'REDIRECT_HTTP_' . $normalized,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = $_SERVER[$candidate] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        if (function_exists('getallheaders')) {
+            $target = strtolower($name);
+            foreach (getallheaders() as $headerName => $headerValue) {
+                if (strtolower((string) $headerName) !== $target) {
+                    continue;
+                }
+
+                if (is_string($headerValue) && trim($headerValue) !== '') {
+                    return trim($headerValue);
+                }
+            }
+        }
+
+        return null;
     }
     public function ipAddress(): ?string
     {
