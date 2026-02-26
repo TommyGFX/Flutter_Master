@@ -10,6 +10,7 @@ use RuntimeException;
 final class TaxComplianceDeService
 {
     private const EINVOICE_FORMATS = ['xrechnung', 'zugferd'];
+    private const DOCUMENT_TYPES_REQUIRING_REFERENCE = ['credit_note', 'cancellation'];
 
     public function __construct(
         private readonly PDO $pdo,
@@ -123,6 +124,10 @@ final class TaxComplianceDeService
             $errors[] = 'missing_line_items';
         }
 
+        $documentTypeResult = $this->evaluateDocumentTypeRules($document, $lineItems, $config);
+        $errors = [...$errors, ...$documentTypeResult['errors']];
+        $warnings = [...$warnings, ...$documentTypeResult['warnings']];
+
         $taxResult = $this->evaluateTaxRules($config, $lineItems, $document);
         $errors = [...$errors, ...$taxResult['errors']];
         $warnings = [...$warnings, ...$taxResult['warnings']];
@@ -131,6 +136,7 @@ final class TaxComplianceDeService
             'document_id' => $documentId,
             'valid' => $errors === [],
             'small_business_enabled' => (bool) ($config['small_business_enabled'] ?? false),
+            'document_type' => (string) ($document['document_type'] ?? 'invoice'),
             'tax_categories' => $taxResult['categories'],
             'errors' => array_values(array_unique($errors)),
             'warnings' => array_values(array_unique($warnings)),
@@ -266,6 +272,10 @@ final class TaxComplianceDeService
         ];
 
         $xml = $this->buildSimpleEInvoiceXml($payload);
+        $validation = $this->validateEInvoiceXml($normalizedFormat, $xml);
+        if (($validation['valid'] ?? false) !== true) {
+            throw new RuntimeException('invalid_einvoice_xml');
+        }
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO billing_einvoice_exchange
@@ -289,6 +299,7 @@ final class TaxComplianceDeService
             'mime' => 'application/xml',
             'filename' => sprintf('%s-%s.xml', $normalizedFormat, (string) ($document['document_number'] ?? $documentId)),
             'content_base64' => base64_encode($xml),
+            'validation' => $validation,
         ];
     }
 
@@ -304,6 +315,11 @@ final class TaxComplianceDeService
             throw new RuntimeException('xml_content_required');
         }
 
+        $validation = $this->validateEInvoiceXml($format, $xml);
+        if (($validation['valid'] ?? false) !== true) {
+            throw new RuntimeException('invalid_einvoice_xml');
+        }
+
         $stmt = $this->pdo->prepare(
             'INSERT INTO billing_einvoice_exchange
                 (tenant_id, document_id, exchange_direction, invoice_format, payload_json, xml_content, status)
@@ -316,14 +332,137 @@ final class TaxComplianceDeService
             'invoice_format' => $format,
             'payload_json' => json_encode(['source' => 'api_import'], JSON_THROW_ON_ERROR),
             'xml_content' => $xml,
-            'status' => 'received',
+            'status' => 'validated',
         ]);
 
         return [
-            'status' => 'received',
+            'status' => 'validated',
             'format' => $format,
             'exchange_id' => (int) $this->pdo->lastInsertId(),
+            'validation' => $validation,
         ];
+    }
+
+    public function validateEInvoiceXml(string $format, string $xml): array
+    {
+        $normalizedFormat = strtolower(trim($format));
+        if (!in_array($normalizedFormat, self::EINVOICE_FORMATS, true)) {
+            throw new RuntimeException('invalid_einvoice_format');
+        }
+
+        libxml_use_internal_errors(true);
+        $dom = new \DOMDocument();
+        $loaded = $dom->loadXML($xml, LIBXML_NONET);
+        $libxmlErrors = libxml_get_errors();
+        libxml_clear_errors();
+
+        if ($loaded === false) {
+            return [
+                'valid' => false,
+                'errors' => ['invalid_xml_syntax'],
+                'warnings' => [],
+            ];
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $errors = [];
+        $warnings = [];
+
+        $rootFormat = strtolower(trim((string) $xpath->evaluate('string(/eInvoice/format)')));
+        if ($rootFormat !== $normalizedFormat) {
+            $errors[] = 'format_mismatch';
+        }
+
+        $documentNumber = trim((string) $xpath->evaluate('string(/eInvoice/documentNumber)'));
+        if ($documentNumber === '') {
+            $errors[] = 'missing_document_number';
+        }
+
+        $currency = strtoupper(trim((string) $xpath->evaluate('string(/eInvoice/currency)')));
+        if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+            $errors[] = 'invalid_currency_code';
+        }
+
+        $grandTotal = trim((string) $xpath->evaluate('string(/eInvoice/grandTotal)'));
+        if ($grandTotal === '' || !is_numeric($grandTotal)) {
+            $errors[] = 'invalid_grand_total';
+        }
+
+        if ($normalizedFormat === 'xrechnung') {
+            if (trim((string) $xpath->evaluate('string(/eInvoice/specificationIdentifier)')) === '') {
+                $errors[] = 'missing_xrechnung_specification_identifier';
+            }
+            if (trim((string) $xpath->evaluate('string(/eInvoice/buyerReference)')) === '') {
+                $warnings[] = 'missing_xrechnung_buyer_reference';
+            }
+        }
+
+        if ($normalizedFormat === 'zugferd') {
+            if (trim((string) $xpath->evaluate('string(/eInvoice/profile)')) === '') {
+                $errors[] = 'missing_zugferd_profile';
+            }
+            if (trim((string) $xpath->evaluate('string(/eInvoice/documentContext)')) === '') {
+                $errors[] = 'missing_zugferd_document_context';
+            }
+        }
+
+        if ($libxmlErrors !== []) {
+            $warnings[] = 'xml_parser_warnings_present';
+        }
+
+        return [
+            'valid' => $errors === [],
+            'errors' => array_values(array_unique($errors)),
+            'warnings' => array_values(array_unique($warnings)),
+        ];
+    }
+
+    private function evaluateDocumentTypeRules(array $document, array $lineItems, array $config): array
+    {
+        $documentType = (string) ($document['document_type'] ?? 'invoice');
+        $errors = [];
+        $warnings = [];
+
+        if (($config['supply_date_required'] ?? false) === true) {
+            $needsDueDateAsMandatory = in_array($documentType, ['invoice', 'credit_note', 'cancellation'], true);
+            if (empty($document['due_date']) && $needsDueDateAsMandatory) {
+                $errors[] = 'missing_due_date';
+            }
+        }
+
+        if (in_array($documentType, self::DOCUMENT_TYPES_REQUIRING_REFERENCE, true)
+            && empty($document['reference_document_id'])) {
+            $errors[] = 'missing_reference_document';
+        }
+
+        $grandTotal = (float) ($document['grand_total'] ?? 0.0);
+        if (in_array($documentType, ['invoice', 'order_confirmation', 'quote'], true) && $grandTotal <= 0.0) {
+            $warnings[] = 'non_positive_total_for_sales_document';
+        }
+
+        if (in_array($documentType, self::DOCUMENT_TYPES_REQUIRING_REFERENCE, true) && $grandTotal > 0.0) {
+            $errors[] = 'credit_or_cancellation_requires_negative_total';
+        }
+
+        if (in_array($documentType, self::DOCUMENT_TYPES_REQUIRING_REFERENCE, true)) {
+            $hasNegativeLine = false;
+            foreach ($lineItems as $lineItem) {
+                if (!is_array($lineItem)) {
+                    continue;
+                }
+
+                if (((float) ($lineItem['unit_price'] ?? 0.0)) < 0.0) {
+                    $hasNegativeLine = true;
+                    break;
+                }
+            }
+
+            if (!$hasNegativeLine) {
+                $errors[] = 'credit_or_cancellation_requires_negative_line_items';
+            }
+        }
+
+        return ['errors' => $errors, 'warnings' => $warnings];
     }
 
     private function evaluateTaxRules(array $config, array $lineItems, array $document): array
@@ -371,6 +510,10 @@ final class TaxComplianceDeService
             sprintf('  <documentNumber>%s</documentNumber>', htmlspecialchars((string) ($payload['document_number'] ?? ''), ENT_QUOTES, 'UTF-8')),
             sprintf('  <currency>%s</currency>', htmlspecialchars((string) ($payload['currency'] ?? 'EUR'), ENT_QUOTES, 'UTF-8')),
             sprintf('  <grandTotal>%.2f</grandTotal>', (float) ($payload['grand_total'] ?? 0.0)),
+            sprintf('  <specificationIdentifier>%s</specificationIdentifier>', htmlspecialchars((string) ($payload['format'] ?? '') === 'xrechnung' ? 'urn:cen.eu:en16931:2017#compliant#xrechnung_3.0' : '', ENT_QUOTES, 'UTF-8')),
+            sprintf('  <buyerReference>%s</buyerReference>', htmlspecialchars((string) ($payload['customer'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            sprintf('  <profile>%s</profile>', htmlspecialchars((string) ($payload['format'] ?? '') === 'zugferd' ? 'urn:factur-x.eu:1p0:en16931:comfort' : '', ENT_QUOTES, 'UTF-8')),
+            sprintf('  <documentContext>%s</documentContext>', htmlspecialchars((string) ($payload['format'] ?? '') === 'zugferd' ? 'EN16931' : '', ENT_QUOTES, 'UTF-8')),
             '</eInvoice>',
         ];
 

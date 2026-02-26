@@ -490,3 +490,21 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Phase 2 als abgeschlossen markiert und nächster Fokus auf Phase 3 verschoben.
 
 **Abnahme-Status Schritt 31:** Die offenen MVP+-Punkte aus Phase 2 (Zahlungseingänge inkl. Teilzahlungen/Skonto sowie tenant-spezifische Gebühren-/Verzugszinsregeln) sind implementiert, testseitig regressionsgesichert und in der Roadmap als abgeschlossen dokumentiert.
+
+
+## Schritt 27 – PLUGIN_ROADMAP Phase 3 (Preflight-Regeln pro Dokumenttyp + E-Rechnungs-Validator) ergänzt (abgeschlossen)
+- `TaxComplianceDeService` um **dokumenttypspezifische Preflight-Regeln** erweitert:
+  - Pflicht-Datum für finalisierungsnahe Dokumenttypen (Rechnung/Gutschrift/Storno)
+  - Referenzpflicht und Negativbetragslogik für Gutschrift/Storno
+  - Warn-/Fehlerpfade je Dokumenttyp (z. B. nicht-positive Summen bei Sales-Dokumenten)
+- XRechnung-/ZUGFeRD-Flows um einen **technischen XML-Validator** ergänzt:
+  - Struktur- und Pflichtfeldprüfung (`format`, `documentNumber`, `currency`, `grandTotal`)
+  - Formatspezifische Checks (`specificationIdentifier`/`buyerReference` für XRechnung, `profile`/`documentContext` für ZUGFeRD)
+  - Import verweigert invalide XMLs (`invalid_einvoice_xml`), Export liefert Validator-Report mit zurück
+- Regressionstest `backend/tests/Regression/tax_compliance_phase3_regression_test.php` ergänzt für:
+  - neue Preflight-Regeln je Dokumenttyp
+  - erfolgreiche XRechnung-/ZUGFeRD-Validierung
+  - negatives Import-Szenario bei Format-/Schemafehlern
+
+**Abnahme-Status Phase 3 (Zwischenstand):** Die Backend-Compliance wurde für Dokumenttyp-spezifische Pflichtlogik und technische E-Rechnungsvalidierung gehärtet.
+
