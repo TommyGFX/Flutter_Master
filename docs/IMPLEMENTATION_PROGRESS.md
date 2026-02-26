@@ -541,3 +541,20 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Führt Contract-/Regressionstests sowie das neue E-Invoice-CI-Gate als festen Pipeline-Schritt aus.
 
 **Abnahme-Status Schritt 33:** Die in der Roadmap geforderte Anbindung externer Referenzvalidatoren (CI-Gate) ist technisch verdrahtet, und das Pflichtdaten-Mapping für produktive XRechnung/ZUGFeRD-Profile wurde backendseitig vervollständigt.
+
+
+## Schritt 34 – PLUGIN_ROADMAP Phase 3: Produktive Validator-Endpunkte/Secrets je Umgebung vorbereitet
+- CI-Gate-Script `backend/scripts/ci_einvoice_reference_gate.php` erweitert:
+  - Umgebungsauflösung via `EINVOICE_VALIDATOR_ENV` (`dev|staging|prod`) ergänzt.
+  - ENV-Auflösung priorisiert suffixierte Werte (`*_..._<ENV>`) mit Fallback auf Default-Werte.
+  - Optionale Authentifizierung für externe Referenzvalidatoren unterstützt (`*_VALIDATOR_AUTH_HEADER`, `*_VALIDATOR_AUTH_TOKEN`).
+  - Konfigurierbares Timeout über `EINVOICE_VALIDATOR_TIMEOUT_SECONDS` ergänzt.
+- GitHub Workflow `.github/workflows/backend-ci.yml` erweitert:
+  - Neues Job-Matrix-Gate `einvoice-reference-gate` für `dev`, `staging`, `prod` hinzugefügt.
+  - Job auf GitHub `environment` je Matrix-Wert verdrahtet, damit Secrets isoliert je Umgebung gepflegt werden können.
+  - Externe Validator-URL/Auth-Secrets und Timeout-Variable je Environment an das Gate-Script übergeben.
+- Betriebsdokumentation `backend/README.md` ergänzt:
+  - Vollständige ENV-Konventionen für Endpoint/Auth/Timeout dokumentiert.
+  - Matrix-Ausführung über GitHub Environments als Zielbetrieb beschrieben.
+
+**Abnahme-Status Schritt 34:** Die technische Verdrahtung für umgebungsbezogene Produktiv-Validatoren ist abgeschlossen. Die finale fachliche Abnahme gegen reale Referenzinstanzen erfolgt nach Befüllung der Environment-Secrets (`dev/staging/prod`) im Ziel-Repository.

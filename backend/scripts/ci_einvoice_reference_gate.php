@@ -23,19 +23,42 @@ if (file_exists($autoload)) {
     });
 }
 
-function runExternalValidator(string $url, string $format, string $xml): void
+function resolveConfigValue(string $baseKey, ?string $environment): ?string
+{
+    if (is_string($environment) && trim($environment) !== '') {
+        $scopedValue = getenv($baseKey . '_' . strtoupper(trim($environment)));
+        if (is_string($scopedValue) && trim($scopedValue) !== '') {
+            return trim($scopedValue);
+        }
+    }
+
+    $defaultValue = getenv($baseKey);
+    if (!is_string($defaultValue) || trim($defaultValue) === '') {
+        return null;
+    }
+
+    return trim($defaultValue);
+}
+
+function runExternalValidator(string $url, string $format, string $xml, ?string $authHeader, ?string $authToken, int $timeoutSeconds): void
 {
     $ch = curl_init($url);
     if ($ch === false) {
         throw new RuntimeException('could_not_init_curl');
     }
 
+    $headers = ['Content-Type: application/xml', 'Accept: application/json'];
+    if (is_string($authToken) && $authToken !== '') {
+        $headerName = is_string($authHeader) && trim($authHeader) !== '' ? trim($authHeader) : 'Authorization';
+        $headers[] = sprintf('%s: %s', $headerName, $authToken);
+    }
+
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/xml', 'Accept: application/json'],
+        CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => $xml,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_TIMEOUT => $timeoutSeconds,
     ]);
 
     $response = curl_exec($ch);
@@ -126,6 +149,10 @@ $pdo->prepare('INSERT INTO billing_document_addresses (tenant_id, document_id, a
 
 $service = new TaxComplianceDeService($pdo, new BillingCoreService($pdo));
 
+$validatorEnvironment = resolveConfigValue('EINVOICE_VALIDATOR_ENV', null);
+$timeoutSeconds = (int) (resolveConfigValue('EINVOICE_VALIDATOR_TIMEOUT_SECONDS', $validatorEnvironment) ?? '30');
+$timeoutSeconds = $timeoutSeconds > 0 ? $timeoutSeconds : 30;
+
 $formats = ['xrechnung', 'zugferd'];
 foreach ($formats as $format) {
     $export = $service->exportEInvoice($tenantId, $documentId, $format);
@@ -138,14 +165,22 @@ foreach ($formats as $format) {
         throw new RuntimeException('missing_export_xml_for_' . $format);
     }
 
-    $validatorUrl = getenv(strtoupper($format) . '_VALIDATOR_URL');
-    if (is_string($validatorUrl) && trim($validatorUrl) !== '') {
-        runExternalValidator(trim($validatorUrl), $format, $xml);
-        echo strtoupper($format) . " external validator passed\n";
+    $validatorPrefix = strtoupper($format) . '_VALIDATOR';
+    $validatorUrl = resolveConfigValue($validatorPrefix . '_URL', $validatorEnvironment);
+    if (is_string($validatorUrl) && $validatorUrl !== '') {
+        $authHeader = resolveConfigValue($validatorPrefix . '_AUTH_HEADER', $validatorEnvironment);
+        $authToken = resolveConfigValue($validatorPrefix . '_AUTH_TOKEN', $validatorEnvironment);
+
+        runExternalValidator($validatorUrl, $format, $xml, $authHeader, $authToken, $timeoutSeconds);
+        echo strtoupper($format) . " external validator passed (env=" . ($validatorEnvironment ?? 'default') . ")\n";
         continue;
     }
 
-    echo strtoupper($format) . " external validator skipped (set " . strtoupper($format) . "_VALIDATOR_URL)\n";
+    echo strtoupper($format) . " external validator skipped (set " . $validatorPrefix . "_URL";
+    if ($validatorEnvironment !== null) {
+        echo '_' . strtoupper($validatorEnvironment);
+    }
+    echo ")\n";
 }
 
 echo "E-Invoice reference validator CI gate passed\n";

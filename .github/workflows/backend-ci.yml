@@ -28,8 +28,34 @@ jobs:
       - run: php tests/Contract/plugin_navigation_contract_test.php
       - run: php tests/Regression/billing_payments_phase2_regression_test.php
       - run: php tests/Regression/tax_compliance_phase3_regression_test.php
+
+  einvoice-reference-gate:
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        validator_env: [dev, staging, prod]
+    environment: ${{ matrix.validator_env }}
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
       - name: E-Invoice external reference validator gate
         env:
+          EINVOICE_VALIDATOR_ENV: ${{ matrix.validator_env }}
           XRECHNUNG_VALIDATOR_URL: ${{ secrets.XRECHNUNG_VALIDATOR_URL }}
+          XRECHNUNG_VALIDATOR_AUTH_HEADER: ${{ secrets.XRECHNUNG_VALIDATOR_AUTH_HEADER }}
+          XRECHNUNG_VALIDATOR_AUTH_TOKEN: ${{ secrets.XRECHNUNG_VALIDATOR_AUTH_TOKEN }}
           ZUGFERD_VALIDATOR_URL: ${{ secrets.ZUGFERD_VALIDATOR_URL }}
+          ZUGFERD_VALIDATOR_AUTH_HEADER: ${{ secrets.ZUGFERD_VALIDATOR_AUTH_HEADER }}
+          ZUGFERD_VALIDATOR_AUTH_TOKEN: ${{ secrets.ZUGFERD_VALIDATOR_AUTH_TOKEN }}
+          EINVOICE_VALIDATOR_TIMEOUT_SECONDS: ${{ vars.EINVOICE_VALIDATOR_TIMEOUT_SECONDS }}
         run: php scripts/ci_einvoice_reference_gate.php

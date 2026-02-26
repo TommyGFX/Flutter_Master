@@ -237,7 +237,11 @@ Hinweise:
 ## E-Rechnung Referenzvalidatoren (CI-Gate, Roadmap Phase 3)
 - Script: `php scripts/ci_einvoice_reference_gate.php`
 - Zweck: Exportiert XRechnung/ZUGFeRD aus einem referenznahen Testfall und validiert die XMLs.
-- Externe Validatoren können in CI per ENV angebunden werden:
-  - `XRECHNUNG_VALIDATOR_URL`
-  - `ZUGFERD_VALIDATOR_URL`
-- Wenn ENV-Variablen nicht gesetzt sind, läuft der interne Gate-Check weiter und externe Prüfungen werden als `skipped` protokolliert.
+- Umgebungsspezifische Produktiv-Validatoren werden über `EINVOICE_VALIDATOR_ENV` (`dev|staging|prod`) aufgelöst.
+- Unterstützte ENV-Namen je Format (`XRECHNUNG`/`ZUGFERD`):
+  - Endpoint: `<FORMAT>_VALIDATOR_URL` oder `<FORMAT>_VALIDATOR_URL_<ENV>`
+  - Optionaler Headername: `<FORMAT>_VALIDATOR_AUTH_HEADER` oder `<FORMAT>_VALIDATOR_AUTH_HEADER_<ENV>`
+  - Optionales Secret/Token: `<FORMAT>_VALIDATOR_AUTH_TOKEN` oder `<FORMAT>_VALIDATOR_AUTH_TOKEN_<ENV>`
+- Optional: `EINVOICE_VALIDATOR_TIMEOUT_SECONDS` (oder suffixiert je ENV) für lange Validator-Laufzeiten.
+- Wenn keine URL gesetzt ist, läuft der interne Gate-Check weiter und externe Prüfungen werden als `skipped` protokolliert.
+- GitHub Actions führt den Gate-Run als Matrix (`dev`, `staging`, `prod`) mit jeweils eigener GitHub-Environment-Konfiguration aus.
