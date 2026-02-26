@@ -573,3 +573,42 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Ziel: Behebung der gemeldeten Analyzer-Fehler (`undefined_function`, `extends_non_class`, Folgefehler auf `state`/`ref`).
 
 **Abnahme-Status Schritt 36:** Die gemeldeten Riverpod-Migrationsfehler im Billing-Flow-Codepfad sind auf Quelltextebene korrigiert; finale Verifikation erfolgt in Flutter-fähiger Umgebung.
+
+## Schritt 24 – PLUGIN_ROADMAP Phase 4 erweitert (Provider-Adapter + Flutter Abo-Management-UI)
+- Payment-Method-Update-Flow in `subscriptions_billing` auf **Provider-Adapter-Pattern** umgestellt:
+  - Neue Adapter/Registry in `App\Services\SubscriptionsBilling\*` für Stripe/PayPal.
+  - Service `SubscriptionsBillingService` nutzt Registry-Auflösung pro Request (`provider`) statt statischer URL-Generierung.
+  - Persistenz `subscription_payment_method_updates` um `provider` erweitert, damit Recovery-Fälle provider-spezifisch nachvollziehbar sind.
+- API/Composition aktualisiert:
+  - `SubscriptionsBillingController` akzeptiert Payload beim Endpoint `POST /api/billing/subscriptions/contracts/{id}/payment-method-update-link`.
+  - `App` verdrahtet Provider-Registry zentral mit Stripe/PayPal-Adaptern.
+- Flutter Admin-UI für Phase 4 ergänzt:
+  - Neuer Screen `SubscriptionManagementScreen` im Dashboard-Menü (`Abo-Management (Phase 4)`).
+  - Neuer Riverpod-Controller `SubscriptionManagementController` lädt Pläne/Verträge und triggert die Jobs:
+    - Recurring Engine
+    - Auto-Invoicing
+    - Dunning/Retention
+    - Provider-spezifischer Payment-Method-Update-Link je Vertrag
+- Regressionstest ergänzt:
+  - `backend/tests/Regression/subscriptions_billing_phase4_regression_test.php` validiert Registry/Adapter-Mapping (Stripe/PayPal) und Invalid-Provider-Guard.
+
+**Status-Update Phase 4:** Der offene Backlog-Punkt „Provider-Adapter + Flutter Abo-Management-UI“ ist umgesetzt. Für die finale Abnahme folgen produktive Provider-Webhooks/Completion-Callbacks inkl. Sandbox-E2E.
+
+## Schritt 25 – CORS-Fix für Login-Preflight (`crm.ordentis.de` -> `api.ordentis.de`)
+- CORS-Handling in `App::applyCors` robuster gemacht:
+  - erlaubte Origins werden nicht mehr nur statisch über exakte Liste geprüft,
+  - zusätzlich werden `https://*.ordentis.de` sowie `http://localhost:*` unterstützt.
+- Hintergrund: Browser-Preflight für `POST /api/login/employee` vom CRM-Origin schlug ohne `Access-Control-Allow-Origin` fehl.
+- Regressionstest ergänzt: `backend/tests/Regression/cors_origin_regression_test.php` validiert erlaubte/blockierte Origins.
+
+**Status:** Preflight-Origin-Matching ist für produktive `ordentis.de`-Subdomains und lokale Entwicklungsports abgesichert.
+
+## Schritt 26 – Header-Resolution-Härtung für CORS/Preflight
+- `Request::header` erweitert, damit Header nicht nur über `HTTP_*` gelesen werden, sondern auch über Fallbacks:
+  - `<HEADER_KEY>` (z. B. `ORIGIN`)
+  - `REDIRECT_HTTP_<HEADER_KEY>`
+  - optional `getallheaders()` (case-insensitive)
+- Hintergrund: Je nach Reverse-Proxy/FPM-Setup kann `Origin` unter abweichenden Server-Keys ankommen, wodurch CORS-Matching trotz korrektem Browser-Origin ins Leere läuft.
+- Regressionstest ergänzt: `backend/tests/Regression/request_header_resolution_regression_test.php`.
+
+**Status:** Header-Auflösung ist robust gegenüber typischen Proxy-Varianten; CORS-Origin-Erkennung für Login-Preflights wird dadurch stabiler.

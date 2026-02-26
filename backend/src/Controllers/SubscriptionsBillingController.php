@@ -137,7 +137,7 @@ final class SubscriptionsBillingController
         }
 
         try {
-            Response::json(['data' => $this->subscriptions->createPaymentMethodUpdateLink($tenantId, (int) $contractId)], 201);
+            Response::json(['data' => $this->subscriptions->createPaymentMethodUpdateLink($tenantId, (int) $contractId, $request->json())], 201);
         } catch (RuntimeException $exception) {
             $code = $exception->getMessage() === 'contract_not_found' ? 404 : 422;
             Response::json(['error' => $exception->getMessage()], $code);

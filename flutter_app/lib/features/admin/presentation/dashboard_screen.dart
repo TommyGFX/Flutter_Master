@@ -8,6 +8,7 @@ import '../../../core/network/dio_client.dart';
 import '../../../l10n/l10n.dart';
 import '../../auth/auth_controller.dart';
 import '../../billing/presentation/billing_flow_screen.dart';
+import '../../billing/presentation/subscription_management_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -95,6 +96,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   _PlatformInsightsCard(),
                   _AccountsCard(),
                   const BillingFlowScreen(),
+                  const SubscriptionManagementScreen(),
                   _AutomationCard(),
                 ],
               ),
@@ -153,7 +155,8 @@ class _SideNav extends StatelessWidget {
         _NavTile(label: l10n.platformInsights, icon: Icons.query_stats_outlined, selected: selectedIndex == 5, onTap: () => onSelect(5)),
         _NavTile(label: l10n.usersCustomers, icon: Icons.groups_outlined, selected: selectedIndex == 6, onTap: () => onSelect(6)),
         _NavTile(label: 'Billing E2E (Phase 1)', icon: Icons.receipt_long_outlined, selected: selectedIndex == 7, onTap: () => onSelect(7)),
-        _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 8, onTap: () => onSelect(8)),
+        _NavTile(label: 'Abo-Management (Phase 4)', icon: Icons.subscriptions_outlined, selected: selectedIndex == 8, onTap: () => onSelect(8)),
+        _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 9, onTap: () => onSelect(9)),
         ListTile(
           leading: const Icon(Icons.dataset_outlined),
           title: Text(l10n.crudPlayground),
