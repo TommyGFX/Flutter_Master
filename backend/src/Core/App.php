@@ -8,6 +8,7 @@ use App\Controllers\AuthController;
 use App\Controllers\AdminPluginController;
 use App\Controllers\CrudController;
 use App\Controllers\DocumentController;
+use App\Controllers\BillingCoreController;
 use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
@@ -17,6 +18,7 @@ use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
 use App\Services\ApprovalService;
+use App\Services\BillingCoreService;
 use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
@@ -46,6 +48,7 @@ final class App
         $platformAdmin = new PlatformAdminController(new JwtService(), new RefreshTokenService(), new AuditLogService());
         $accounts = new AccountManagementController();
         $pluginFoundation = new PluginFoundationController(new RbacService());
+        $billingCore = new BillingCoreController(new BillingCoreService(Database::connection()), new PdfRendererService());
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -98,6 +101,21 @@ final class App
         $router->add('PUT', '/api/customers/{id}', [$accounts, 'updateCustomer']);
         $router->add('DELETE', '/api/customers/{id}', [$accounts, 'deleteCustomer']);
 
+
+        $router->add('GET', '/api/billing/documents', [$billingCore, 'listDocuments']);
+        $router->add('POST', '/api/billing/documents', [$billingCore, 'createDocument']);
+        $router->add('GET', '/api/billing/documents/{id}', [$billingCore, 'getDocument']);
+        $router->add('PUT', '/api/billing/documents/{id}', [$billingCore, 'updateDocument']);
+        $router->add('POST', '/api/billing/documents/{id}/finalize', [$billingCore, 'finalizeDocument']);
+        $router->add('POST', '/api/billing/documents/{id}/convert-to-invoice', [$billingCore, 'convertToInvoice']);
+        $router->add('POST', '/api/billing/documents/{id}/credit-note', [$billingCore, 'createCreditNote']);
+        $router->add('POST', '/api/billing/documents/{id}/status', [$billingCore, 'setStatus']);
+        $router->add('GET', '/api/billing/documents/{id}/history', [$billingCore, 'history']);
+        $router->add('GET', '/api/billing/documents/{id}/pdf', [$billingCore, 'exportPdf']);
+
+        $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
+        $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);
+        $router->add('PUT', '/api/billing/customers/{id}', [$billingCore, 'updateCustomer']);
         $router->add('GET', '/api/self/profile', [$accounts, 'selfProfile']);
         $router->add('PUT', '/api/self/profile', [$accounts, 'updateSelfProfile']);
 

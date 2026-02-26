@@ -311,3 +311,157 @@ CREATE TABLE IF NOT EXISTS tenant_accounts (
     INDEX idx_tenant_accounts_role (tenant_id, role_id),
     CONSTRAINT fk_tenant_accounts_role FOREIGN KEY (role_id) REFERENCES roles (id)
 );
+
+CREATE TABLE IF NOT EXISTS billing_customers (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    customer_type VARCHAR(32) NOT NULL,
+    company_name VARCHAR(255) NULL,
+    first_name VARCHAR(120) NULL,
+    last_name VARCHAR(120) NULL,
+    email VARCHAR(255) NULL,
+    phone VARCHAR(64) NULL,
+    vat_id VARCHAR(64) NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_billing_customers_tenant (tenant_id, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS billing_customer_addresses (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    customer_id BIGINT UNSIGNED NOT NULL,
+    address_type VARCHAR(32) NOT NULL,
+    company_name VARCHAR(255) NULL,
+    first_name VARCHAR(120) NULL,
+    last_name VARCHAR(120) NULL,
+    street VARCHAR(255) NULL,
+    house_number VARCHAR(50) NULL,
+    postal_code VARCHAR(32) NULL,
+    city VARCHAR(120) NULL,
+    country VARCHAR(120) NULL,
+    email VARCHAR(255) NULL,
+    phone VARCHAR(64) NULL,
+    is_default TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_customer_addresses (tenant_id, customer_id, address_type),
+    CONSTRAINT fk_billing_customer_address_customer FOREIGN KEY (customer_id) REFERENCES billing_customers (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_customer_contacts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    customer_id BIGINT UNSIGNED NOT NULL,
+    first_name VARCHAR(120) NULL,
+    last_name VARCHAR(120) NULL,
+    email VARCHAR(255) NULL,
+    phone VARCHAR(64) NULL,
+    role_label VARCHAR(120) NULL,
+    is_primary TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_customer_contacts (tenant_id, customer_id),
+    CONSTRAINT fk_billing_customer_contact_customer FOREIGN KEY (customer_id) REFERENCES billing_customers (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_documents (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'billing_core',
+    document_type VARCHAR(32) NOT NULL,
+    document_number VARCHAR(64) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'draft',
+    customer_id BIGINT UNSIGNED NULL,
+    customer_name_snapshot VARCHAR(255) NULL,
+    reference_document_id BIGINT UNSIGNED NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    exchange_rate DECIMAL(18,6) NOT NULL DEFAULT 1.000000,
+    subtotal_net DECIMAL(18,2) NOT NULL DEFAULT 0,
+    discount_total DECIMAL(18,2) NOT NULL DEFAULT 0,
+    shipping_total DECIMAL(18,2) NOT NULL DEFAULT 0,
+    fees_total DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tax_total DECIMAL(18,2) NOT NULL DEFAULT 0,
+    grand_total DECIMAL(18,2) NOT NULL DEFAULT 0,
+    totals_json JSON NOT NULL,
+    due_date DATE NULL,
+    finalized_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_billing_documents_tenant_status (tenant_id, status, created_at),
+    INDEX idx_billing_documents_number (tenant_id, document_number),
+    CONSTRAINT fk_billing_document_customer FOREIGN KEY (customer_id) REFERENCES billing_customers (id),
+    CONSTRAINT fk_billing_document_reference FOREIGN KEY (reference_document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_document_addresses (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    address_type VARCHAR(32) NOT NULL,
+    company_name VARCHAR(255) NULL,
+    first_name VARCHAR(120) NULL,
+    last_name VARCHAR(120) NULL,
+    street VARCHAR(255) NULL,
+    house_number VARCHAR(50) NULL,
+    postal_code VARCHAR(32) NULL,
+    city VARCHAR(120) NULL,
+    country VARCHAR(120) NULL,
+    email VARCHAR(255) NULL,
+    phone VARCHAR(64) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_document_addresses (tenant_id, document_id, address_type),
+    CONSTRAINT fk_billing_document_address_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_line_items (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    position INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    quantity DECIMAL(18,4) NOT NULL,
+    unit_price DECIMAL(18,2) NOT NULL,
+    discount_percent DECIMAL(8,4) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tax_rate DECIMAL(8,4) NOT NULL DEFAULT 0,
+    line_net DECIMAL(18,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_line_items_document (tenant_id, document_id, position),
+    CONSTRAINT fk_billing_line_item_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_tax_breakdowns (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    tax_rate DECIMAL(8,4) NOT NULL,
+    net_amount DECIMAL(18,2) NOT NULL,
+    tax_amount DECIMAL(18,2) NOT NULL,
+    gross_amount DECIMAL(18,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_tax_breakdown (tenant_id, document_id, tax_rate),
+    CONSTRAINT fk_billing_tax_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_number_counters (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    series_key VARCHAR(32) NOT NULL,
+    year INT NOT NULL,
+    current_number BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_billing_number_counter (tenant_id, series_key, year)
+);
+
+CREATE TABLE IF NOT EXISTS billing_document_history (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    action_key VARCHAR(128) NOT NULL,
+    actor_id VARCHAR(128) NOT NULL,
+    metadata_json JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_history_document (tenant_id, document_id, created_at),
+    CONSTRAINT fk_billing_history_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
