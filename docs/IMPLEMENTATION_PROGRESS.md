@@ -716,3 +716,17 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - `backend/tests/Regression/org_management_role_capability_map_regression_test.php` prüft Rollenmatrix für `admin`, `buchhaltung`, `readonly` inkl. Filterung inaktiver Plugins.
 
 **Fortschrittsstatus Phase 7:** Das Rollenmodell ist nun an Plugin-Capabilities gekoppelt und als auslesbare API verfügbar. Nächster Ausbau bleibt die UI-seitige Pflege/Visualisierung inkl. Default-Rollenprofilen.
+
+## Schritt 40 – Phase 7 ausgeliefert: Default-Rollenprofile + Org-Management-UI-Matrix
+- Tenant-spezifische Default-Role-Seeds im Org-Management ergänzt (`OrgManagementService`):
+  - Beim Rollenabruf werden fehlende Standardprofile **einmalig pro Tenant** automatisch angelegt: `admin`, `buchhaltung`, `vertrieb`, `readonly`.
+  - Seeds enthalten initiale Permission-Sets; bestehende tenant-eigene Rollen/Permissions bleiben unverändert (keine Überschreibung).
+- Org-Management-UI im Admin-Dashboard erweitert:
+  - Rollenpflege bleibt über `/api/admin/roles/permissions` erhalten.
+  - Zusätzlich wird die Matrix `/api/org/roles/capabilities` geladen und visualisiert (Rolle -> Permissions -> aktive Plugin-Capabilities).
+  - Hinweis auf ausgelieferte Default-Profile im UI ergänzt.
+- Regression abgesichert:
+  - `backend/tests/Regression/org_management_default_role_seed_regression_test.php` validiert automatische Seed-Anlage der vier Standardprofile.
+  - `backend/tests/Regression/org_management_role_capability_map_regression_test.php` auf Seed-Verhalten (`vertrieb`) erweitert.
+
+**Fortschrittsstatus Phase 7:** Der Backlogpunkt „Default-Rollenprofile als tenant-spezifische Seeds und UI-Matrix im Org-Management“ ist umgesetzt und regressionsseitig abgesichert. Nächster Ausbau: Audit-Log-Filter/Export-UX in der Org-Management-Maske vertiefen.

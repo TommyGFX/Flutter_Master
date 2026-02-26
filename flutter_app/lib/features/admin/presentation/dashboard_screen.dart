@@ -475,8 +475,10 @@ class _RolePermissionCard extends ConsumerStatefulWidget {
 class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _ApiClientMixin {
   final permissionsCtrl = TextEditingController();
   bool isLoading = true;
+  String? error;
   String selectedRole = '';
   List<Map<String, dynamic>> roles = [];
+  List<Map<String, dynamic>> capabilityMatrix = [];
 
   @override
   void initState() {
@@ -491,19 +493,35 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
   }
 
   Future<void> loadRoles() async {
-    setState(() => isLoading = true);
-    final dio = ref.read(dioProvider);
-    final response = await dio.get('/admin/roles/permissions', options: buildOptions());
-    final data = (response.data['data'] as List<dynamic>? ?? const [])
-        .map((role) => Map<String, dynamic>.from(role as Map))
-        .toList(growable: false);
-
     setState(() {
-      roles = data;
-      selectedRole = data.isNotEmpty ? data.first['role_key'].toString() : '';
-      permissionsCtrl.text = _permissionsFor(selectedRole).join(', ');
-      isLoading = false;
+      isLoading = true;
+      error = null;
     });
+
+    final dio = ref.read(dioProvider);
+
+    try {
+      final roleResponse = await dio.get('/admin/roles/permissions', options: buildOptions());
+      final capabilityResponse = await dio.get('/org/roles/capabilities', options: buildOptions());
+
+      final roleData = (roleResponse.data['data'] as List<dynamic>? ?? const [])
+          .map((role) => Map<String, dynamic>.from(role as Map))
+          .toList(growable: false);
+      final matrixData = (capabilityResponse.data['data'] as List<dynamic>? ?? const [])
+          .map((entry) => Map<String, dynamic>.from(entry as Map))
+          .toList(growable: false);
+
+      setState(() {
+        roles = roleData;
+        capabilityMatrix = matrixData;
+        selectedRole = roleData.isNotEmpty ? roleData.first['role_key'].toString() : '';
+        permissionsCtrl.text = _permissionsFor(selectedRole).join(', ');
+      });
+    } on DioException catch (exception) {
+      setState(() => error = exception.response?.data.toString() ?? exception.message);
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   List<String> _permissionsFor(String roleKey) {
@@ -533,6 +551,57 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
     await loadRoles();
   }
 
+  Widget _buildCapabilityMatrix(BuildContext context) {
+    if (capabilityMatrix.isEmpty) {
+      return const Text('Keine Rollen-Matrix verfügbar.');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: capabilityMatrix.map((entry) {
+        final roleKey = entry['role_key']?.toString() ?? '-';
+        final roleName = entry['name']?.toString() ?? roleKey;
+        final permissions = (entry['permissions'] as List<dynamic>? ?? const [])
+            .map((permission) => permission.toString())
+            .toList(growable: false);
+        final plugins = (entry['plugin_capabilities'] as List<dynamic>? ?? const [])
+            .map((plugin) => Map<String, dynamic>.from(plugin as Map))
+            .toList(growable: false);
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$roleName ($roleKey)', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Text('Permissions: ${permissions.isEmpty ? '-' : permissions.join(', ')}'),
+                const SizedBox(height: 8),
+                if (plugins.isEmpty)
+                  const Text('Keine aktiven Plugin-Capabilities verfügbar.')
+                else
+                  ...plugins.map((plugin) {
+                    final pluginName = plugin['display_name']?.toString() ?? plugin['plugin_key']?.toString() ?? '-';
+                    final capabilities = (plugin['capabilities'] as List<dynamic>? ?? const [])
+                        .map((capability) => capability.toString())
+                        .where((capability) => capability.isNotEmpty)
+                        .join(', ');
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('• $pluginName → ${capabilities.isEmpty ? '-' : capabilities}'),
+                    );
+                  }),
+              ],
+            ),
+          ),
+        );
+      }).toList(growable: false),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -542,39 +611,49 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
         padding: const EdgeInsets.all(20),
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.permissionsManagement, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedRole.isEmpty ? null : selectedRole,
-                    items: roles
-                        .map((role) => DropdownMenuItem<String>(
-                              value: role['role_key'].toString(),
-                              child: Text('${role['name']} (${role['role_key']})'),
-                            ))
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
-                      setState(() {
-                        selectedRole = value;
-                        permissionsCtrl.text = _permissionsFor(value).join(', ');
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: permissionsCtrl,
-                    minLines: 2,
-                    maxLines: 4,
-                    decoration: InputDecoration(labelText: l10n.permissionsCommaSeparated),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(onPressed: savePermissions, child: Text(l10n.submitApproval)),
-                ],
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.permissionsManagement, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    const Text('Default-Profile: Admin, Buchhaltung, Vertrieb, Read-only (tenant-spezifisch).'),
+                    const SizedBox(height: 12),
+                    if (error != null)
+                      Text(l10n.errorWithMessage(error!), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    DropdownButtonFormField<String>(
+                      value: selectedRole.isEmpty ? null : selectedRole,
+                      items: roles
+                          .map((role) => DropdownMenuItem<String>(
+                                value: role['role_key'].toString(),
+                                child: Text('${role['name']} (${role['role_key']})'),
+                              ))
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        setState(() {
+                          selectedRole = value;
+                          permissionsCtrl.text = _permissionsFor(value).join(', ');
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: permissionsCtrl,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: InputDecoration(labelText: l10n.permissionsCommaSeparated),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: savePermissions, child: Text(l10n.submitApproval)),
+                    const SizedBox(height: 20),
+                    Text('Org-Management Rollen/Capability-Matrix', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _buildCapabilityMatrix(context),
+                  ],
+                ),
               ),
       ),
     );
