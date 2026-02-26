@@ -72,6 +72,56 @@ assertSame('https://www.paypal.com/checkoutnow?token=ORDER-42', $paypalPayload['
 
 assertThrows(static fn () => $registry->resolve('adyen'), 'invalid_provider');
 
+
+$pdo = new PDO('sqlite::memory:');
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$pdo->exec('CREATE TABLE billing_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    grand_total REAL NOT NULL,
+    currency_code TEXT NOT NULL,
+    due_date TEXT NULL
+)');
+$pdo->exec('CREATE TABLE billing_payment_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id TEXT NOT NULL,
+    document_id INTEGER NOT NULL,
+    provider TEXT NOT NULL,
+    payment_link_id TEXT NOT NULL,
+    payment_url TEXT NOT NULL,
+    status TEXT NOT NULL,
+    provider_response_json TEXT NULL,
+    amount REAL NOT NULL,
+    currency_code TEXT NOT NULL,
+    expires_at TEXT NULL,
+    created_at TEXT NULL,
+    updated_at TEXT NULL
+)');
+$pdo->exec("INSERT INTO billing_documents (id, tenant_id, status, grand_total, currency_code, due_date) VALUES (1, 'tenant-phase2', 'sent', 120.00, 'EUR', date('now', '-10 day'))");
+
+$serviceWithData = new BillingPaymentsService($pdo, $registry);
+$stripeLink = $serviceWithData->createPaymentLink('tenant-phase2', 1, [
+    'provider' => 'stripe',
+    'payment_link_id' => 'plink_e2e_1',
+    'url' => 'https://checkout.stripe.com/pay/plink_e2e_1',
+    'provider_response' => ['id' => 'plink_e2e_1', 'object' => 'payment_link'],
+]);
+assertSame('stripe', $stripeLink['provider'], 'Stripe service flow should keep provider key.');
+assertTrue(str_contains((string) $stripeLink['provider_response_json'], 'payment_link'), 'Stripe provider response should be JSON encoded.');
+
+$paypalLink = $serviceWithData->createPaymentLink('tenant-phase2', 1, [
+    'provider' => 'paypal',
+    'order_id' => 'ORDER-E2E-1',
+    'approval_url' => 'https://www.paypal.com/checkoutnow?token=ORDER-E2E-1',
+    'provider_response' => ['id' => 'ORDER-E2E-1', 'intent' => 'CAPTURE'],
+]);
+assertSame('paypal', $paypalLink['provider'], 'PayPal service flow should keep provider key.');
+
+$links = $serviceWithData->listPaymentLinks('tenant-phase2', 1);
+assertSame(2, count($links), 'Service should persist payment links for both adapters.');
+assertTrue(str_contains((string) $links[0]['provider_response_json'], 'CAPTURE') || str_contains((string) $links[1]['provider_response_json'], 'CAPTURE'), 'PayPal provider response should be persisted for audits.');
+
 $service = new BillingPaymentsService(new PDO('sqlite::memory:'), $registry);
 assertTrue($service->isDunningEscalationDue(null), 'Dunning escalation should be due for a new case.');
 assertTrue(!$service->isDunningEscalationDue(['last_notice_at' => date('Y-m-d') . ' 08:00:00']), 'Dunning escalation should be throttled on the same day.');

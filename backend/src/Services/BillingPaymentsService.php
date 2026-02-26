@@ -29,8 +29,8 @@ final class BillingPaymentsService
         $amount = $this->normalizeMoney($payload['amount'] ?? $document['grand_total']);
 
         $stmt = $this->pdo->prepare(
-            'INSERT INTO billing_payment_links (tenant_id, document_id, provider, payment_link_id, payment_url, status, amount, currency_code, expires_at)
-             VALUES (:tenant_id, :document_id, :provider, :payment_link_id, :payment_url, :status, :amount, :currency_code, :expires_at)'
+            'INSERT INTO billing_payment_links (tenant_id, document_id, provider, payment_link_id, payment_url, status, provider_response_json, amount, currency_code, expires_at)
+             VALUES (:tenant_id, :document_id, :provider, :payment_link_id, :payment_url, :status, :provider_response_json, :amount, :currency_code, :expires_at)'
         );
         $stmt->execute([
             ':tenant_id' => $tenantId,
@@ -39,6 +39,7 @@ final class BillingPaymentsService
             ':payment_link_id' => $adapterPayload['payment_link_id'],
             ':payment_url' => $adapterPayload['payment_url'],
             ':status' => $adapterPayload['status'],
+            ':provider_response_json' => $adapterPayload['provider_response_json'],
             ':amount' => $amount,
             ':currency_code' => strtoupper((string) ($document['currency_code'] ?? 'EUR')),
             ':expires_at' => $adapterPayload['expires_at'],
@@ -48,6 +49,7 @@ final class BillingPaymentsService
             'id' => (int) $this->pdo->lastInsertId(),
             'provider' => $provider,
             'payment_link_id' => $adapterPayload['payment_link_id'],
+            'provider_response_json' => $adapterPayload['provider_response_json'],
             'status' => $adapterPayload['status'],
             'amount' => $amount,
         ];
@@ -56,7 +58,7 @@ final class BillingPaymentsService
     public function listPaymentLinks(string $tenantId, int $documentId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, provider, payment_link_id, payment_url, status, amount, currency_code, expires_at, created_at, updated_at
+            'SELECT id, provider, payment_link_id, payment_url, status, provider_response_json, amount, currency_code, expires_at, created_at, updated_at
              FROM billing_payment_links
              WHERE tenant_id = :tenant_id AND document_id = :document_id
              ORDER BY id DESC'
