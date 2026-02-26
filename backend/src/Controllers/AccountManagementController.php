@@ -29,7 +29,8 @@ final class AccountManagementController
         }
 
         $payload = $request->json();
-        $payload['account_type'] = in_array($payload['account_type'] ?? 'user', ['admin', 'user'], true) ? $payload['account_type'] : 'user';
+        $requestedType = (string) ($payload['account_type'] ?? 'user');
+        $payload['account_type'] = in_array($requestedType, ['admin', 'user'], true) ? $requestedType : 'user';
         $this->createAccount($tenantId, $payload);
     }
 

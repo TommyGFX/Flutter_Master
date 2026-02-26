@@ -88,15 +88,42 @@ final class DocumentController
             $smtpConfig = $config->smtpConfig($tenantId);
             $this->tenantMailerService->send($to, $renderedSubject, $renderedHtml, $smtpConfig);
         } catch (Throwable $exception) {
-            Response::json([
-                'error' => 'email_send_failed',
-                'message' => $exception->getMessage(),
-            ], 500);
+            $error = self::classifyMailTransportFailure($exception);
+            Response::json($error['body'], $error['status']);
             return;
         }
 
         Response::json(['sent' => true]);
     }
+
+
+    public static function classifyMailTransportFailure(Throwable $exception): array
+    {
+        $message = trim($exception->getMessage());
+
+        if (preg_match('/got code\s*"?([0-9]{3})"?/i', $message, $matches) === 1) {
+            $smtpCode = (int) $matches[1];
+            if ($smtpCode >= 500 && $smtpCode < 600) {
+                return [
+                    'status' => 422,
+                    'body' => [
+                        'error' => 'email_rejected',
+                        'message' => 'Email was rejected by recipient mail server.',
+                        'smtp_code' => $smtpCode,
+                    ],
+                ];
+            }
+        }
+
+        return [
+            'status' => 500,
+            'body' => [
+                'error' => 'email_send_failed',
+                'message' => $message,
+            ],
+        ];
+    }
+
 
     private function tenantId(Request $request): string
     {
