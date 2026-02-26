@@ -57,6 +57,9 @@ Siehe: `docs/IMPLEMENTATION_PROGRESS.md`
 ## Wichtiger Hinweis
 Dies ist ein robuster **Starter** mit sauberer Architektur und Kern-Skeletten für alle geforderten Features.
 Für produktiven Einsatz sollten als nächste Schritte u. a. implementiert werden:
-- echtes JWT/Refresh Token Handling mit Rotationen,
-- Domain-spezifische Stripe Webhook-Persistenz (Provisionierung, Rechnungslauf, Dunning),
 - persistente Audit-Logs und Approval-Flow für kritische RBAC-/Plugin-Änderungen.
+
+## Domains
+- Frontend (CRM): `https://crm.ordentis.de`
+- Backend API: `https://api.ordentis.de`
+- Flutter kann das API-Ziel per `--dart-define=API_BASE_URL=<url>` überschreiben (Default: `https://api.ordentis.de/api`).

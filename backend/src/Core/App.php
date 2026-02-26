@@ -25,6 +25,13 @@ final class App
         $router = new Router();
         $request = new Request();
 
+        $this->applyCors($request);
+
+        if (strtoupper($request->method()) === 'OPTIONS') {
+            Response::json(['ok' => true]);
+            return;
+        }
+
         $auth = new AuthController(new JwtService(), new RefreshTokenService());
         $crud = new CrudController();
         $upload = new UploadController();
@@ -60,5 +67,24 @@ final class App
         $router->add('PUT', '/api/admin/roles/{roleKey}/permissions', [$adminPlugins, 'updateRolePermissions']);
 
         $router->dispatch($request);
+    }
+
+    private function applyCors(Request $request): void
+    {
+        $allowedOrigins = [
+            'https://crm.ordentis.de',
+            'http://localhost:3000',
+            'http://localhost:5173',
+        ];
+
+        $origin = $request->header('Origin');
+        if ($origin !== null && in_array($origin, $allowedOrigins, true)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Vary: Origin');
+        }
+
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-Id, Stripe-Signature');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Credentials: true');
     }
 }
