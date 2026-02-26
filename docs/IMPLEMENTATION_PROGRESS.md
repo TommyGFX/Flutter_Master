@@ -359,3 +359,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Wiederverwendbare Quote-Berechnung (Netto, Rabatt, Steuer, Gesamtsumme) für Sales- und Billing-Flows.
 
 **Abnahme-Status Phase 9:** Wiederverwendbare Preislogik ist als Backend-MVP umgesetzt und für Sales-/Billing-Workflows per API verfügbar.
+
+## Schritt 26 – PLUGIN_ROADMAP Phase 0 (Schritt 0.1) schriftlich fixiert (abgeschlossen)
+- Verbindliches Contract-Dokument für das Plugin-SDK erstellt: `docs/PLUGIN_SDK_CONTRACT.md`.
+- Der Contract dokumentiert normativ:
+  - kanonische Plugin-Metadaten (`plugin_key`, `version`, `capabilities`, `required_permissions`, `lifecycle_status`)
+  - Lifecycle-Semantik (`installed|enabled|suspended|retired`) inkl. Aktivitätsregel `is_active`
+  - Hook-Whitelist (`before_validate`, `before_finalize`, `after_finalize`, `before_send`, `after_payment`)
+  - Tenant/Company Feature-Flags, Domain-Event-/Outbox-Contract und UI-Shell-Sichtbarkeitsregeln
+- Konsistenz zur bestehenden Implementierung hergestellt durch Abgleich mit:
+  - Persistenzschema (`backend/src/migrations/001_init.sql`)
+  - Plugin-Runtime (`backend/src/Services/PluginManager.php`)
+  - Foundation-/Shell-APIs (`backend/src/Controllers/PluginFoundationController.php`)
+- Fortschrittstabelle der Roadmap aktualisiert: Phase 0 von „Geplant“ auf „In Umsetzung (Contract schriftlich fixiert)“.
+
+**Abnahme-Status Schritt 0.1:** Der Plugin-SDK Contract ist schriftlich fixiert, versioniert und als verbindliche Grundlage für nachfolgende Plugin-Phasen dokumentiert.
