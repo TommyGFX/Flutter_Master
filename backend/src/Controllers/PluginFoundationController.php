@@ -29,7 +29,7 @@ final class PluginFoundationController
         $permissions = $this->permissionList($request);
 
         $stmt = $pdo->prepare(
-            'SELECT plugin_key, display_name, version, lifecycle_status, capabilities_json, required_permissions_json
+            'SELECT plugin_key, display_name, version, lifecycle_status, is_active, capabilities_json, required_permissions_json
              FROM tenant_plugins
              WHERE tenant_id = :tenant_id
              ORDER BY display_name ASC'
@@ -37,24 +37,39 @@ final class PluginFoundationController
         $stmt->execute(['tenant_id' => $tenantId]);
 
         $plugins = [];
+        $navigation = [];
         foreach ($stmt->fetchAll() ?: [] as $row) {
             $requiredPermissions = $this->decodeJsonList($row['required_permissions_json'] ?? null);
             if (!$this->hasCapabilityAccess($permissions, $requiredPermissions)) {
                 continue;
             }
 
-            $plugins[] = [
+            $lifecycleStatus = (string) ($row['lifecycle_status'] ?? 'installed');
+            $isEnabled = $lifecycleStatus === 'enabled';
+            $isActive = (bool) ($row['is_active'] ?? false);
+            $isVisible = $isEnabled && $isActive;
+
+            $capabilities = $this->decodeJsonList($row['capabilities_json'] ?? null);
+
+            $plugin = [
                 'plugin_key' => (string) ($row['plugin_key'] ?? ''),
                 'display_name' => (string) ($row['display_name'] ?? ''),
                 'version' => (string) ($row['version'] ?? '1.0.0'),
-                'lifecycle_status' => (string) ($row['lifecycle_status'] ?? 'installed'),
-                'capabilities' => $this->decodeJsonList($row['capabilities_json'] ?? null),
+                'lifecycle_status' => $lifecycleStatus,
+                'is_active' => $isActive,
+                'is_visible' => $isVisible,
+                'capabilities' => $capabilities,
                 'required_permissions' => $requiredPermissions,
                 'hooks' => PluginContract::ALLOWED_HOOKS,
             ];
+
+            $plugins[] = $plugin;
+            if ($isVisible) {
+                $navigation[] = $plugin;
+            }
         }
 
-        Response::json(['data' => $plugins]);
+        Response::json(['data' => $plugins, 'navigation' => $navigation]);
     }
 
     public function setFeatureFlag(Request $request, string $flagKey): void
