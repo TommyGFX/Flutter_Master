@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Services\BillingPayments\PayPalPaymentProviderAdapter;
+use App\Services\BillingPayments\PaymentProviderRegistry;
+use App\Services\BillingPayments\StripePaymentProviderAdapter;
 use PDO;
 use RuntimeException;
 
 final class BillingPaymentsService
 {
-    public function __construct(private readonly PDO $pdo)
+    public function __construct(private readonly PDO $pdo, private readonly ?PaymentProviderRegistry $providerRegistry = null)
     {
     }
 
@@ -21,24 +24,7 @@ final class BillingPaymentsService
         }
 
         $provider = strtolower(trim((string) ($payload['provider'] ?? 'stripe')));
-        if (!in_array($provider, ['stripe', 'paypal'], true)) {
-            throw new RuntimeException('invalid_provider');
-        }
-
-        $externalLinkId = trim((string) ($payload['payment_link_id'] ?? ''));
-        if ($externalLinkId === '') {
-            throw new RuntimeException('payment_link_id_required');
-        }
-
-        $url = trim((string) ($payload['url'] ?? ''));
-        if ($url === '') {
-            throw new RuntimeException('payment_url_required');
-        }
-
-        $status = strtolower(trim((string) ($payload['status'] ?? 'open')));
-        if (!in_array($status, ['open', 'paid', 'expired', 'cancelled'], true)) {
-            throw new RuntimeException('invalid_payment_link_status');
-        }
+        $adapterPayload = $this->paymentProviderRegistry()->resolve($provider)->createPaymentLink($payload, $document);
 
         $amount = $this->normalizeMoney($payload['amount'] ?? $document['grand_total']);
 
@@ -50,19 +36,19 @@ final class BillingPaymentsService
             ':tenant_id' => $tenantId,
             ':document_id' => $documentId,
             ':provider' => $provider,
-            ':payment_link_id' => $externalLinkId,
-            ':payment_url' => $url,
-            ':status' => $status,
+            ':payment_link_id' => $adapterPayload['payment_link_id'],
+            ':payment_url' => $adapterPayload['payment_url'],
+            ':status' => $adapterPayload['status'],
             ':amount' => $amount,
             ':currency_code' => strtoupper((string) ($document['currency_code'] ?? 'EUR')),
-            ':expires_at' => $this->nullableString($payload['expires_at'] ?? null),
+            ':expires_at' => $adapterPayload['expires_at'],
         ]);
 
         return [
             'id' => (int) $this->pdo->lastInsertId(),
             'provider' => $provider,
-            'payment_link_id' => $externalLinkId,
-            'status' => $status,
+            'payment_link_id' => $adapterPayload['payment_link_id'],
+            'status' => $adapterPayload['status'],
             'amount' => $amount,
         ];
     }
@@ -254,6 +240,10 @@ final class BillingPaymentsService
             }
 
             $case = $this->findDunningCase($tenantId, (int) $document['id']);
+            if (!$this->isDunningEscalationDue($case)) {
+                continue;
+            }
+
             $nextLevel = min(3, ((int) ($case['current_level'] ?? 0)) + 1);
             $fee = (float) $config['fee_level_' . $nextLevel];
             $interest = round($summary['outstanding_amount'] * (((float) $config['interest_rate_percent']) / 100), 2);
@@ -352,7 +342,7 @@ final class BillingPaymentsService
 
     private function findDunningCase(string $tenantId, int $documentId): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT current_level FROM billing_dunning_cases WHERE tenant_id = :tenant_id AND document_id = :document_id LIMIT 1');
+        $stmt = $this->pdo->prepare('SELECT current_level, last_notice_at FROM billing_dunning_cases WHERE tenant_id = :tenant_id AND document_id = :document_id LIMIT 1');
         $stmt->execute([':tenant_id' => $tenantId, ':document_id' => $documentId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -395,6 +385,33 @@ final class BillingPaymentsService
             ':fee_amount' => round($fee, 2),
             ':interest_amount' => round($interest, 2),
         ]);
+    }
+
+
+    private function paymentProviderRegistry(): PaymentProviderRegistry
+    {
+        if ($this->providerRegistry instanceof PaymentProviderRegistry) {
+            return $this->providerRegistry;
+        }
+
+        return new PaymentProviderRegistry([
+            new StripePaymentProviderAdapter(),
+            new PayPalPaymentProviderAdapter(),
+        ]);
+    }
+
+    public function isDunningEscalationDue(?array $case): bool
+    {
+        if ($case === null) {
+            return true;
+        }
+
+        $lastNoticeAt = $this->nullableString($case['last_notice_at'] ?? null);
+        if ($lastNoticeAt === null) {
+            return true;
+        }
+
+        return substr($lastNoticeAt, 0, 10) !== date('Y-m-d');
     }
 
     private function normalizeMoney(mixed $value): float
