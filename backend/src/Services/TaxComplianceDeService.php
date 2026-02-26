@@ -11,6 +11,7 @@ final class TaxComplianceDeService
 {
     private const EINVOICE_FORMATS = ['xrechnung', 'zugferd'];
     private const DOCUMENT_TYPES_REQUIRING_REFERENCE = ['credit_note', 'cancellation'];
+    private const EU_COUNTRY_CODES = ['AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK'];
 
     public function __construct(
         private readonly PDO $pdo,
@@ -259,15 +260,21 @@ final class TaxComplianceDeService
             throw new RuntimeException('document_not_found');
         }
 
+        $taxConfig = $this->getConfig($tenantId);
+        $taxRuleEvaluation = $this->evaluateTaxRules($taxConfig, is_array($document['line_items'] ?? null) ? $document['line_items'] : [], $document);
+
         $payload = [
             'format' => $normalizedFormat,
             'document_id' => $documentId,
             'document_number' => $document['document_number'] ?? null,
+            'issue_date' => isset($document['finalized_at']) && is_string($document['finalized_at']) ? substr($document['finalized_at'], 0, 10) : gmdate('Y-m-d'),
             'currency' => $document['currency_code'] ?? 'EUR',
             'grand_total' => $document['grand_total'] ?? 0,
             'customer' => $document['customer_name_snapshot'] ?? null,
+            'customer_country' => $this->detectCustomerCountryCode($document),
             'line_items' => $document['line_items'] ?? [],
             'tax_breakdown' => $document['tax_breakdown'] ?? [],
+            'tax_categories' => $taxRuleEvaluation['categories'],
             'generated_at' => gmdate('c'),
         ];
 
@@ -378,18 +385,33 @@ final class TaxComplianceDeService
             $errors[] = 'missing_document_number';
         }
 
+        $issueDate = trim((string) $xpath->evaluate('string(/eInvoice/issueDate)'));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $issueDate)) {
+            $errors[] = 'invalid_issue_date';
+        }
+
         $currency = strtoupper(trim((string) $xpath->evaluate('string(/eInvoice/currency)')));
         if (!preg_match('/^[A-Z]{3}$/', $currency)) {
             $errors[] = 'invalid_currency_code';
         }
 
         $grandTotal = trim((string) $xpath->evaluate('string(/eInvoice/grandTotal)'));
-        if ($grandTotal === '' || !is_numeric($grandTotal)) {
+        if ($grandTotal === '' || !preg_match('/^-?\d+\.\d{2}$/', $grandTotal)) {
             $errors[] = 'invalid_grand_total';
         }
 
+        $lineItemCount = (int) $xpath->evaluate('count(/eInvoice/lineItems/lineItem)');
+        if ($lineItemCount < 1) {
+            $errors[] = 'missing_line_items';
+        }
+
+        $taxCategoryCount = (int) $xpath->evaluate('count(/eInvoice/taxCategories/category)');
+        if ($taxCategoryCount < 1) {
+            $errors[] = 'missing_tax_categories';
+        }
+
         if ($normalizedFormat === 'xrechnung') {
-            if (trim((string) $xpath->evaluate('string(/eInvoice/specificationIdentifier)')) === '') {
+            if (trim((string) $xpath->evaluate('string(/eInvoice/specificationIdentifier)')) !== 'urn:cen.eu:en16931:2017#compliant#xrechnung_3.0') {
                 $errors[] = 'missing_xrechnung_specification_identifier';
             }
             if (trim((string) $xpath->evaluate('string(/eInvoice/buyerReference)')) === '') {
@@ -398,10 +420,10 @@ final class TaxComplianceDeService
         }
 
         if ($normalizedFormat === 'zugferd') {
-            if (trim((string) $xpath->evaluate('string(/eInvoice/profile)')) === '') {
+            if (trim((string) $xpath->evaluate('string(/eInvoice/profile)')) !== 'urn:factur-x.eu:1p0:en16931:comfort') {
                 $errors[] = 'missing_zugferd_profile';
             }
-            if (trim((string) $xpath->evaluate('string(/eInvoice/documentContext)')) === '') {
+            if (trim((string) $xpath->evaluate('string(/eInvoice/documentContext)')) !== 'EN16931') {
                 $errors[] = 'missing_zugferd_document_context';
             }
         }
@@ -471,12 +493,24 @@ final class TaxComplianceDeService
         $errors = [];
         $warnings = [];
 
+        $sellerCountry = strtoupper(trim((string) ($config['country_code'] ?? 'DE')));
+        $customerCountry = $this->detectCustomerCountryCode($document);
+        $isCrossBorderEu = $customerCountry !== null
+            && in_array($customerCountry, self::EU_COUNTRY_CODES, true)
+            && in_array($sellerCountry, self::EU_COUNTRY_CODES, true)
+            && $customerCountry !== $sellerCountry;
+        $sellerHasVatId = trim((string) ($config['vat_id'] ?? '')) !== '';
+
         foreach ($lineItems as $lineItem) {
             if (!is_array($lineItem)) {
                 continue;
             }
 
             $taxRate = round((float) ($lineItem['tax_rate'] ?? 0.0), 4);
+            $description = strtolower(trim((string) ($lineItem['description'] ?? '')));
+            $explicitCategory = strtolower(trim((string) ($lineItem['tax_category'] ?? '')));
+            $reverseChargeHint = str_contains($description, 'reverse charge') || preg_match('/\brc\b/', $description) === 1;
+
             if (($config['small_business_enabled'] ?? false) === true && $taxRate > 0) {
                 $errors[] = 'small_business_requires_zero_vat';
             }
@@ -484,14 +518,46 @@ final class TaxComplianceDeService
             $category = 'standard';
             if (abs($taxRate - 7.0) < 0.0001) {
                 $category = 'reduced';
+            } elseif ($taxRate <= 0.0 && ($explicitCategory === 'reverse_charge' || $reverseChargeHint)) {
+                $category = 'reverse_charge';
+            } elseif ($taxRate <= 0.0 && $isCrossBorderEu) {
+                $category = 'intra_community';
             } elseif ($taxRate <= 0.0) {
                 $category = 'zero';
-            } elseif (($document['customer_name_snapshot'] ?? '') !== null && str_starts_with(strtoupper((string) ($document['customer_name_snapshot'] ?? '')), 'EU-')) {
-                $category = 'intra_community';
-                $warnings[] = 'eu_customer_detected_verify_vat_id';
+            }
+
+            if ($category === 'reverse_charge') {
+                if ($taxRate > 0.0) {
+                    $errors[] = 'reverse_charge_requires_zero_tax_rate';
+                }
+                if ($customerCountry !== null && $customerCountry === $sellerCountry) {
+                    $errors[] = 'reverse_charge_not_applicable_for_domestic_customer';
+                }
+                if (!$sellerHasVatId) {
+                    $errors[] = 'reverse_charge_requires_seller_vat_id';
+                }
+            }
+
+            if ($category === 'intra_community') {
+                if (!$isCrossBorderEu) {
+                    $errors[] = 'intra_community_requires_cross_border_eu_customer';
+                }
+                if ($taxRate > 0.0) {
+                    $errors[] = 'intra_community_requires_zero_tax_rate';
+                }
+                if (!$sellerHasVatId) {
+                    $errors[] = 'intra_community_requires_seller_vat_id';
+                }
+                if ($customerCountry === null) {
+                    $warnings[] = 'missing_customer_country_for_intra_community_check';
+                }
             }
 
             $categories[] = $category;
+        }
+
+        if (in_array('reverse_charge', $categories, true) && (in_array('standard', $categories, true) || in_array('reduced', $categories, true))) {
+            $warnings[] = 'mixed_reverse_charge_and_taxable_positions';
         }
 
         return [
@@ -508,16 +574,63 @@ final class TaxComplianceDeService
             '<eInvoice>',
             sprintf('  <format>%s</format>', htmlspecialchars((string) ($payload['format'] ?? ''), ENT_QUOTES, 'UTF-8')),
             sprintf('  <documentNumber>%s</documentNumber>', htmlspecialchars((string) ($payload['document_number'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            sprintf('  <issueDate>%s</issueDate>', htmlspecialchars((string) ($payload['issue_date'] ?? gmdate('Y-m-d')), ENT_QUOTES, 'UTF-8')),
             sprintf('  <currency>%s</currency>', htmlspecialchars((string) ($payload['currency'] ?? 'EUR'), ENT_QUOTES, 'UTF-8')),
             sprintf('  <grandTotal>%.2f</grandTotal>', (float) ($payload['grand_total'] ?? 0.0)),
             sprintf('  <specificationIdentifier>%s</specificationIdentifier>', htmlspecialchars((string) ($payload['format'] ?? '') === 'xrechnung' ? 'urn:cen.eu:en16931:2017#compliant#xrechnung_3.0' : '', ENT_QUOTES, 'UTF-8')),
             sprintf('  <buyerReference>%s</buyerReference>', htmlspecialchars((string) ($payload['customer'] ?? ''), ENT_QUOTES, 'UTF-8')),
+            sprintf('  <buyerCountry>%s</buyerCountry>', htmlspecialchars((string) ($payload['customer_country'] ?? ''), ENT_QUOTES, 'UTF-8')),
             sprintf('  <profile>%s</profile>', htmlspecialchars((string) ($payload['format'] ?? '') === 'zugferd' ? 'urn:factur-x.eu:1p0:en16931:comfort' : '', ENT_QUOTES, 'UTF-8')),
             sprintf('  <documentContext>%s</documentContext>', htmlspecialchars((string) ($payload['format'] ?? '') === 'zugferd' ? 'EN16931' : '', ENT_QUOTES, 'UTF-8')),
-            '</eInvoice>',
+            '  <lineItems>',
         ];
 
+        foreach (is_array($payload['line_items'] ?? null) ? $payload['line_items'] : [] as $lineItem) {
+            if (!is_array($lineItem)) {
+                continue;
+            }
+
+            $lines[] = '    <lineItem>';
+            $lines[] = sprintf('      <description>%s</description>', htmlspecialchars((string) ($lineItem['description'] ?? ''), ENT_QUOTES, 'UTF-8'));
+            $lines[] = sprintf('      <quantity>%.2f</quantity>', (float) ($lineItem['quantity'] ?? 0.0));
+            $lines[] = sprintf('      <unitPrice>%.2f</unitPrice>', (float) ($lineItem['unit_price'] ?? 0.0));
+            $lines[] = sprintf('      <taxRate>%.2f</taxRate>', (float) ($lineItem['tax_rate'] ?? 0.0));
+            $lines[] = '    </lineItem>';
+        }
+
+        $lines[] = '  </lineItems>';
+        $lines[] = '  <taxCategories>';
+
+        foreach (is_array($payload['tax_categories'] ?? null) ? array_values(array_unique($payload['tax_categories'])) : [] as $category) {
+            $lines[] = sprintf('    <category>%s</category>', htmlspecialchars((string) $category, ENT_QUOTES, 'UTF-8'));
+        }
+
+        $lines[] = '  </taxCategories>';
+        $lines[] = '</eInvoice>';
+
         return implode("\n", $lines);
+    }
+
+    private function detectCustomerCountryCode(array $document): ?string
+    {
+        $addresses = is_array($document['addresses'] ?? null) ? $document['addresses'] : [];
+        foreach ($addresses as $address) {
+            if (!is_array($address)) {
+                continue;
+            }
+
+            $type = strtolower(trim((string) ($address['address_type'] ?? '')));
+            if (!in_array($type, ['billing', 'shipping'], true)) {
+                continue;
+            }
+
+            $country = strtoupper(trim((string) ($address['country'] ?? '')));
+            if ($country !== '') {
+                return $country;
+            }
+        }
+
+        return null;
     }
 
     private function nullableString(mixed $value): ?string
