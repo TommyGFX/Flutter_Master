@@ -38,14 +38,21 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - CRUD-Liste/Editor als Start für Full CRUD.
 - Modernes SaaS Layout (Sidebar/Topbar, mobil optimiert).
 
-## Schritt 4 – Qualität & Übergabe (abgeschlossen)
+## Schritt 4 – Qualität & Übergabe (in Arbeit)
 - Dokumentation ergänzt (`README.md`).
 - Syntaxcheck für PHP ausgeführt.
 - Änderungen versioniert.
 
 ## Nächste Ausbaustufen
-1. Reales JWT via `firebase/php-jwt` + Refresh Tokens.
-2. Persistente Queue Worker (Redis/MySQL polling).
-3. Komplette Stripe Checkout Session Erstellung + Customer Portal.
-4. PDF Rendering (z. B. Dompdf) und SMTP Versand (z. B. Symfony Mailer).
-5. Plugin-Lifecycle UI + Rechteverwaltung im Admin-Bereich.
+1. Persistente Queue Worker (Redis/MySQL polling).
+2. Komplette Stripe Checkout Session Erstellung + Customer Portal.
+3. PDF Rendering (z. B. Dompdf) und SMTP Versand (z. B. Symfony Mailer).
+4. Plugin-Lifecycle UI + Rechteverwaltung im Admin-Bereich.
+
+
+## Schritt 5 – JWT Hardening + Refresh Tokens (abgeschlossen)
+- `JwtService` auf `firebase/php-jwt` umgestellt (HS256, iat/nbf/exp).
+- Persistente Refresh-Token-Strategie mit Rotation implementiert.
+- Neue Auth-Endpunkte ergänzt: `/api/token/refresh`, `/api/logout`.
+- Migration für Tabelle `refresh_tokens` ergänzt (Hash-Speicherung, Revocation, Ablaufzeit).
+- Backend-Doku auf neue Auth-Flows aktualisiert.
