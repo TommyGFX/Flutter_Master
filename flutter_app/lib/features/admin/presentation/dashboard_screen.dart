@@ -17,6 +17,32 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int selectedIndex = 0;
+  String? selectedPluginKey;
+  String selectedPluginTitle = 'Plugin Shell';
+  List<Map<String, dynamic>> shellNavigation = const [];
+
+  void selectPluginNavigation(Map<String, dynamic> plugin) {
+    setState(() {
+      selectedPluginKey = plugin['plugin_key']?.toString();
+      selectedPluginTitle = plugin['display_name']?.toString() ?? 'Plugin Shell';
+      selectedIndex = 1;
+    });
+  }
+
+  void updateShellNavigation(List<Map<String, dynamic>> navigation) {
+    setState(() {
+      shellNavigation = navigation;
+
+      final hasSelection = selectedPluginKey != null &&
+          navigation.any((plugin) => plugin['plugin_key']?.toString() == selectedPluginKey);
+      if (!hasSelection) {
+        selectedPluginKey = navigation.isEmpty ? null : navigation.first['plugin_key']?.toString();
+        selectedPluginTitle = navigation.isEmpty
+            ? 'Plugin Shell'
+            : navigation.first['display_name']?.toString() ?? 'Plugin Shell';
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +55,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ? Drawer(
               child: _SideNav(
                 selectedIndex: selectedIndex,
+                shellNavigation: shellNavigation,
                 onSelect: (index) {
                   setState(() => selectedIndex = index);
                   Navigator.pop(context);
                 },
+                onSelectPlugin: selectPluginNavigation,
               ),
             )
           : null,
@@ -43,7 +71,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               width: 280,
               child: _SideNav(
                 selectedIndex: selectedIndex,
+                shellNavigation: shellNavigation,
                 onSelect: (index) => setState(() => selectedIndex = index),
+                onSelectPlugin: selectPluginNavigation,
               ),
             ),
           Expanded(
@@ -51,9 +81,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               padding: const EdgeInsets.all(16),
               child: IndexedStack(
                 index: selectedIndex,
-                children: const [
+                children: [
                   _AdminOverview(),
-                  _PluginShellCard(),
+                  _PluginShellCard(
+                    selectedPluginKey: selectedPluginKey,
+                    selectedPluginTitle: selectedPluginTitle,
+                    onNavigationLoaded: updateShellNavigation,
+                  ),
                   _PluginLifecycleCard(),
                   _RolePermissionCard(),
                   _ApprovalCard(),
@@ -71,10 +105,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 }
 
 class _SideNav extends StatelessWidget {
-  const _SideNav({required this.selectedIndex, required this.onSelect});
+  const _SideNav({
+    required this.selectedIndex,
+    required this.shellNavigation,
+    required this.onSelect,
+    required this.onSelectPlugin,
+  });
 
   final int selectedIndex;
+  final List<Map<String, dynamic>> shellNavigation;
   final ValueChanged<int> onSelect;
+  final ValueChanged<Map<String, dynamic>> onSelectPlugin;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +126,25 @@ class _SideNav extends StatelessWidget {
         DrawerHeader(child: Text(l10n.adminNavigation)),
         _NavTile(label: l10n.overview, icon: Icons.home_outlined, selected: selectedIndex == 0, onTap: () => onSelect(0)),
         _NavTile(label: 'Plugin Shell', icon: Icons.view_sidebar_outlined, selected: selectedIndex == 1, onTap: () => onSelect(1)),
+        if (shellNavigation.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              'Plugin Navigation (RBAC + aktiv)',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ),
+        ...shellNavigation.map(
+          (plugin) => ListTile(
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            contentPadding: const EdgeInsets.only(left: 28, right: 16),
+            leading: const Icon(Icons.subdirectory_arrow_right_outlined, size: 18),
+            title: Text(plugin['display_name']?.toString() ?? plugin['plugin_key']?.toString() ?? '-'),
+            subtitle: Text(plugin['plugin_key']?.toString() ?? '-'),
+            onTap: () => onSelectPlugin(plugin),
+          ),
+        ),
         _NavTile(label: l10n.pluginLifecycle, icon: Icons.extension_outlined, selected: selectedIndex == 2, onTap: () => onSelect(2)),
         _NavTile(label: l10n.permissionsManagement, icon: Icons.lock_outline, selected: selectedIndex == 3, onTap: () => onSelect(3)),
         _NavTile(label: l10n.approvalsAudit, icon: Icons.approval_outlined, selected: selectedIndex == 4, onTap: () => onSelect(4)),
@@ -180,7 +240,15 @@ class _AdminOverview extends ConsumerWidget {
 }
 
 class _PluginShellCard extends ConsumerStatefulWidget {
-  const _PluginShellCard();
+  const _PluginShellCard({
+    required this.selectedPluginKey,
+    required this.selectedPluginTitle,
+    required this.onNavigationLoaded,
+  });
+
+  final String? selectedPluginKey;
+  final String selectedPluginTitle;
+  final ValueChanged<List<Map<String, dynamic>>> onNavigationLoaded;
 
   @override
   ConsumerState<_PluginShellCard> createState() => _PluginShellCardState();
@@ -190,6 +258,7 @@ class _PluginShellCardState extends ConsumerState<_PluginShellCard> with _ApiCli
   bool isLoading = true;
   String? error;
   List<Map<String, dynamic>> plugins = [];
+  List<Map<String, dynamic>> navigation = [];
 
   @override
   void initState() {
@@ -209,8 +278,15 @@ class _PluginShellCardState extends ConsumerState<_PluginShellCard> with _ApiCli
       final data = (response.data['data'] as List<dynamic>? ?? const [])
           .map((plugin) => Map<String, dynamic>.from(plugin as Map))
           .toList(growable: false);
+      final navigationData = (response.data['navigation'] as List<dynamic>? ?? const [])
+          .map((plugin) => Map<String, dynamic>.from(plugin as Map))
+          .toList(growable: false);
 
-      setState(() => plugins = data);
+      setState(() {
+        plugins = data;
+        navigation = navigationData;
+      });
+      widget.onNavigationLoaded(navigationData);
     } on DioException catch (exception) {
       setState(() => error = exception.response?.data.toString() ?? exception.message);
     } finally {
@@ -220,6 +296,13 @@ class _PluginShellCardState extends ConsumerState<_PluginShellCard> with _ApiCli
 
   @override
   Widget build(BuildContext context) {
+    final selectedPlugin = widget.selectedPluginKey == null
+        ? null
+        : plugins.cast<Map<String, dynamic>?>().firstWhere(
+            (plugin) => plugin?['plugin_key']?.toString() == widget.selectedPluginKey,
+            orElse: () => null,
+          );
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -232,6 +315,24 @@ class _PluginShellCardState extends ConsumerState<_PluginShellCard> with _ApiCli
                 IconButton(onPressed: loadShell, icon: const Icon(Icons.refresh)),
               ],
             ),
+            if (navigation.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('${navigation.length} Plugin(s) in Navigation freigeschaltet.'),
+              ),
+            if (selectedPlugin != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  leading: const Icon(Icons.space_dashboard_outlined),
+                  title: Text('Ausgewählt: ${widget.selectedPluginTitle}'),
+                  subtitle: Text(
+                    'Key: ${selectedPlugin['plugin_key'] ?? '-'} · Status: ${selectedPlugin['lifecycle_status'] ?? 'installed'}',
+                  ),
+                ),
+              ),
             const SizedBox(height: 8),
             if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (isLoading)

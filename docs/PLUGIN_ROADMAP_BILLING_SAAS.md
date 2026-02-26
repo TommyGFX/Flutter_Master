@@ -304,4 +304,8 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
   - Outbox-Worker um `processing`-Status und Reclaim für hängende Jobs ergänzt.
   - Max-Retry-Schutz eingebaut (`failed` nach Erreichen des Limits).
   - Monitoring über dedizierte Metriken/API (`/api/admin/outbox/metrics`) ergänzt.
-- **Nächster Fokus:** Schritt 0.3 Shared UI Shell weiter vertiefen.
+- **Schritt 0.3 Shared UI Shell:** 🔄 vertieft
+  - Backend liefert neben Plugin-Shell-Daten jetzt ein dediziertes `navigation`-Payload für RBAC-konforme **und aktivierte** Plugins.
+  - Flutter Admin-Dashboard zeigt eine einheitliche, dynamische Plugin-Navigation im Sidepanel (inkl. Auswahl-Highlight im Plugin-Shell-Bereich).
+  - Sichtbarkeit in der Navigation basiert auf `enabled`-Lifecycle + `is_active` und bereits gefilterten Tenant-Berechtigungen.
+- **Nächster Fokus:** Phase-0-Abnahmekriterien mit Widget-/Contract-Tests für Navigation absichern.
