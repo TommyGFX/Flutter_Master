@@ -144,6 +144,36 @@ final class SubscriptionsBillingController
         }
     }
 
+    public function completePaymentMethodUpdate(Request $request): void
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === null) {
+            return;
+        }
+
+        try {
+            Response::json(['data' => $this->subscriptions->completePaymentMethodUpdate($tenantId, $request->json())]);
+        } catch (RuntimeException $exception) {
+            $code = $exception->getMessage() === 'payment_method_update_not_found' ? 404 : 422;
+            Response::json(['error' => $exception->getMessage()], $code);
+        }
+    }
+
+    public function providerWebhook(Request $request, string $provider): void
+    {
+        $payload = file_get_contents('php://input') ?: '{}';
+        $signature = $request->header('X-Provider-Signature');
+
+        try {
+            Response::json(['data' => $this->subscriptions->handleProviderWebhook($provider, $payload, $signature)]);
+        } catch (\InvalidArgumentException $exception) {
+            Response::json(['error' => $exception->getMessage()], 400);
+        } catch (RuntimeException $exception) {
+            $code = $exception->getMessage() === 'payment_method_update_not_found' ? 404 : 422;
+            Response::json(['error' => $exception->getMessage()], $code);
+        }
+    }
+
     private function tenantId(Request $request): ?string
     {
         $tenantId = $request->header('X-Tenant-Id');

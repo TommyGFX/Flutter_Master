@@ -180,6 +180,8 @@ final class App
         $router->add('POST', '/api/billing/subscriptions/auto-invoicing/run', [$subscriptionsBilling, 'runAutoInvoicing']);
         $router->add('POST', '/api/billing/subscriptions/dunning/run', [$subscriptionsBilling, 'runDunningRetention']);
         $router->add('POST', '/api/billing/subscriptions/contracts/{id}/payment-method-update-link', [$subscriptionsBilling, 'createPaymentMethodUpdateLink']);
+        $router->add('POST', '/api/billing/subscriptions/payment-method-updates/complete', [$subscriptionsBilling, 'completePaymentMethodUpdate']);
+        $router->add('POST', '/api/billing/subscriptions/providers/{provider}/webhook', [$subscriptionsBilling, 'providerWebhook']);
 
         $router->add('GET', '/api/billing/delivery/templates', [$documentDelivery, 'listTemplates']);
         $router->add('PUT', '/api/billing/delivery/templates/{templateKey}', [$documentDelivery, 'upsertTemplate']);

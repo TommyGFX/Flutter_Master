@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Services\SubscriptionsBilling\PaymentMethodUpdateProviderRegistry;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use PDO;
 use RuntimeException;
 
@@ -450,6 +451,190 @@ final class SubscriptionsBillingService
             'status' => $resolvedLink['status'],
             'provider_response_json' => $resolvedLink['provider_response_json'],
         ];
+    }
+
+    public function completePaymentMethodUpdate(string $tenantId, array $payload): array
+    {
+        $token = strtolower(trim((string) ($payload['token'] ?? '')));
+        $provider = strtolower(trim((string) ($payload['provider'] ?? 'stripe')));
+        $status = strtolower(trim((string) ($payload['status'] ?? 'completed')));
+        $paymentMethodRef = $this->nullableString($payload['payment_method_ref'] ?? null);
+
+        if ($token === '') {
+            throw new RuntimeException('token_required');
+        }
+
+        if (!in_array($status, ['completed', 'failed'], true)) {
+            throw new RuntimeException('invalid_update_status');
+        }
+
+        return $this->persistPaymentMethodUpdate($tenantId, $provider, $token, $status, $paymentMethodRef, $payload);
+    }
+
+    public function handleProviderWebhook(string $provider, string $rawPayload, ?string $signatureHeader): array
+    {
+        $provider = strtolower(trim($provider));
+        if (!in_array($provider, ['stripe', 'paypal'], true)) {
+            throw new RuntimeException('invalid_provider');
+        }
+
+        $payload = json_decode($rawPayload, true);
+        if (!is_array($payload)) {
+            throw new InvalidArgumentException('invalid_webhook_payload');
+        }
+
+        $this->assertWebhookSignature($provider, $rawPayload, $signatureHeader);
+
+        return $provider === 'stripe'
+            ? $this->handleStripeWebhookPayload($payload)
+            : $this->handlePayPalWebhookPayload($payload);
+    }
+
+    private function handleStripeWebhookPayload(array $payload): array
+    {
+        $eventType = strtolower((string) ($payload['type'] ?? ''));
+        $resource = is_array($payload['data']['object'] ?? null) ? $payload['data']['object'] : [];
+        $metadata = is_array($resource['metadata'] ?? null) ? $resource['metadata'] : [];
+
+        $tenantId = trim((string) ($metadata['tenant_id'] ?? $metadata['tenant'] ?? ''));
+        $token = strtolower(trim((string) ($metadata['token'] ?? '')));
+        $paymentMethodRef = $this->nullableString($resource['payment_method'] ?? ($metadata['payment_method_ref'] ?? null));
+
+        if ($tenantId === '' || $token === '') {
+            throw new RuntimeException('webhook_context_missing');
+        }
+
+        $status = in_array($eventType, ['setup_intent.succeeded', 'checkout.session.completed', 'payment_method.attached'], true)
+            ? 'completed'
+            : 'failed';
+
+        return $this->persistPaymentMethodUpdate($tenantId, 'stripe', $token, $status, $paymentMethodRef, $payload);
+    }
+
+    private function handlePayPalWebhookPayload(array $payload): array
+    {
+        $eventType = strtoupper((string) ($payload['event_type'] ?? ''));
+        $resource = is_array($payload['resource'] ?? null) ? $payload['resource'] : [];
+        $custom = is_array($resource['custom_id'] ?? null)
+            ? $resource['custom_id']
+            : ['value' => $resource['custom_id'] ?? null];
+
+        $tenantId = trim((string) ($resource['tenant_id'] ?? $payload['tenant_id'] ?? ''));
+        $token = strtolower(trim((string) ($resource['token'] ?? ($custom['value'] ?? ''))));
+        $paymentMethodRef = $this->nullableString($resource['payer_id'] ?? ($resource['id'] ?? null));
+
+        if ($tenantId === '' || $token === '') {
+            throw new RuntimeException('webhook_context_missing');
+        }
+
+        $status = str_contains($eventType, 'COMPLETED') || str_contains($eventType, 'APPROVED')
+            ? 'completed'
+            : 'failed';
+
+        return $this->persistPaymentMethodUpdate($tenantId, 'paypal', $token, $status, $paymentMethodRef, $payload);
+    }
+
+    private function persistPaymentMethodUpdate(string $tenantId, string $provider, string $token, string $status, ?string $paymentMethodRef, array $payload): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, contract_id, status
+             FROM subscription_payment_method_updates
+             WHERE tenant_id = :tenant_id AND provider = :provider AND token = :token
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':tenant_id' => $tenantId,
+            ':provider' => $provider,
+            ':token' => $token,
+        ]);
+        $updateRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($updateRow)) {
+            throw new RuntimeException('payment_method_update_not_found');
+        }
+
+        $contractId = (int) $updateRow['contract_id'];
+
+        $this->pdo->beginTransaction();
+        try {
+            $updateStmt = $this->pdo->prepare(
+                'UPDATE subscription_payment_method_updates
+                 SET status = :status,
+                     completed_at = CASE WHEN :status = "completed" THEN CURRENT_TIMESTAMP ELSE completed_at END
+                 WHERE id = :id'
+            );
+            $updateStmt->execute([
+                ':status' => $status,
+                ':id' => (int) $updateRow['id'],
+            ]);
+
+            if ($status === 'completed' && $paymentMethodRef !== null) {
+                $contractStmt = $this->pdo->prepare(
+                    'UPDATE subscription_contracts
+                     SET payment_method_ref = :payment_method_ref,
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE tenant_id = :tenant_id AND id = :id'
+                );
+                $contractStmt->execute([
+                    ':payment_method_ref' => $paymentMethodRef,
+                    ':tenant_id' => $tenantId,
+                    ':id' => $contractId,
+                ]);
+
+                $dunningStmt = $this->pdo->prepare(
+                    'UPDATE subscription_dunning_cases
+                     SET payment_method_update_required = 0,
+                         status = "retrying",
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE tenant_id = :tenant_id
+                       AND contract_id = :contract_id
+                       AND payment_method_update_required = 1'
+                );
+                $dunningStmt->execute([
+                    ':tenant_id' => $tenantId,
+                    ':contract_id' => $contractId,
+                ]);
+            }
+
+            $this->insertCycle($tenantId, $contractId, 'payment_method_update_' . $status, 0.0, 'EUR', [
+                'provider' => $provider,
+                'token' => $token,
+                'source' => $payload,
+            ]);
+
+            $this->pdo->commit();
+        } catch (\Throwable $exception) {
+            $this->pdo->rollBack();
+            throw $exception;
+        }
+
+        return [
+            'tenant_id' => $tenantId,
+            'contract_id' => $contractId,
+            'provider' => $provider,
+            'token' => $token,
+            'status' => $status,
+            'payment_method_ref' => $paymentMethodRef,
+        ];
+    }
+
+    private function assertWebhookSignature(string $provider, string $rawPayload, ?string $signatureHeader): void
+    {
+        $secretEnv = $provider === 'stripe'
+            ? 'SUBSCRIPTIONS_STRIPE_WEBHOOK_SECRET'
+            : 'SUBSCRIPTIONS_PAYPAL_WEBHOOK_SECRET';
+        $secret = getenv($secretEnv);
+        if (!is_string($secret) || trim($secret) === '') {
+            return;
+        }
+
+        if (!is_string($signatureHeader) || trim($signatureHeader) === '') {
+            throw new InvalidArgumentException('webhook_signature_missing');
+        }
+
+        $computedSignature = hash_hmac('sha256', $rawPayload, trim($secret));
+        if (!hash_equals($computedSignature, trim($signatureHeader))) {
+            throw new InvalidArgumentException('webhook_signature_invalid');
+        }
     }
 
     private function getContract(string $tenantId, int $contractId): array
