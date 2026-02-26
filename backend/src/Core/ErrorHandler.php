@@ -25,6 +25,14 @@ final class ErrorHandler
 
     public static function handlePhpError(int $severity, string $message, string $file, int $line): bool
     {
+        if (($severity & (E_DEPRECATED | E_USER_DEPRECATED)) !== 0) {
+            return true;
+        }
+
+        if ((error_reporting() & $severity) === 0) {
+            return false;
+        }
+
         throw new \ErrorException($message, 0, $severity, $file, $line);
     }
 }
