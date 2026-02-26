@@ -465,3 +465,90 @@ CREATE TABLE IF NOT EXISTS billing_document_history (
     INDEX idx_billing_history_document (tenant_id, document_id, created_at),
     CONSTRAINT fk_billing_history_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
 );
+
+CREATE TABLE IF NOT EXISTS billing_payment_links (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    provider VARCHAR(32) NOT NULL,
+    payment_link_id VARCHAR(191) NOT NULL,
+    payment_url VARCHAR(512) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'open',
+    amount DECIMAL(18,2) NOT NULL,
+    currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_billing_payment_link (tenant_id, provider, payment_link_id),
+    INDEX idx_billing_payment_links_document (tenant_id, document_id, status),
+    CONSTRAINT fk_billing_payment_link_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_payments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    provider VARCHAR(32) NOT NULL DEFAULT 'manual',
+    external_payment_id VARCHAR(191) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'received',
+    amount_paid DECIMAL(18,2) NOT NULL,
+    fee_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    notes VARCHAR(512) NULL,
+    paid_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_payments_document (tenant_id, document_id, status),
+    CONSTRAINT fk_billing_payment_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_dunning_configs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    grace_days INT NOT NULL DEFAULT 3,
+    interest_rate_percent DECIMAL(8,2) NOT NULL DEFAULT 5.00,
+    fee_level_1 DECIMAL(18,2) NOT NULL DEFAULT 2.50,
+    fee_level_2 DECIMAL(18,2) NOT NULL DEFAULT 5.00,
+    fee_level_3 DECIMAL(18,2) NOT NULL DEFAULT 7.50,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_billing_dunning_config_tenant (tenant_id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_dunning_cases (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    current_level INT NOT NULL DEFAULT 1,
+    outstanding_amount DECIMAL(18,2) NOT NULL,
+    fee_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    interest_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    last_notice_at TIMESTAMP NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_billing_dunning_case (tenant_id, document_id),
+    INDEX idx_billing_dunning_level (tenant_id, current_level, updated_at),
+    CONSTRAINT fk_billing_dunning_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS billing_dunning_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    dunning_level INT NOT NULL,
+    outstanding_amount DECIMAL(18,2) NOT NULL,
+    fee_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    interest_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_billing_dunning_events (tenant_id, document_id, dunning_level, sent_at),
+    CONSTRAINT fk_billing_dunning_event_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
+
+CREATE TABLE IF NOT EXISTS tenant_bank_accounts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    account_holder VARCHAR(255) NULL,
+    iban VARCHAR(64) NOT NULL,
+    bic VARCHAR(32) NULL,
+    bank_name VARCHAR(255) NULL,
+    qr_iban_enabled TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenant_bank_account (tenant_id)
+);
