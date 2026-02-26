@@ -9,6 +9,7 @@ import '../../../l10n/l10n.dart';
 import '../../auth/auth_controller.dart';
 import '../../billing/presentation/billing_flow_screen.dart';
 import '../../billing/presentation/subscription_management_screen.dart';
+import '../../automation/presentation/automation_integrations_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -98,7 +99,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   _AccountsCard(),
                   const BillingFlowScreen(),
                   const SubscriptionManagementScreen(),
-                  _AutomationCard(),
+                  const AutomationIntegrationsScreen(),
                 ],
               ),
             ),

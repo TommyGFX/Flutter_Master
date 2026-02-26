@@ -158,6 +158,17 @@ final class AutomationIntegrationsController
         }
     }
 
+    public function processAutomationRuns(Request $request): void
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === null) {
+            return;
+        }
+
+        $limit = (int) ($request->json()['limit'] ?? 25);
+        Response::json(['data' => $this->automation->processAutomationRuns($tenantId, $limit)]);
+    }
+
     public function importPreview(Request $request): void
     {
         $tenantId = $this->tenantId($request);

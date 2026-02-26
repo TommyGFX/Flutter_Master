@@ -254,7 +254,7 @@ _Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter
 | 5 | E-Mail & Versand | In Umsetzung (Delivery-Worker inkl. Retry/Provider-Dispatch und Flutter-Portal-UI-Flow ergänzt) | Nächster Schritt: Reale SMTP/SendGrid/Mailgun-Sandbox-Abnahme inkl. Tracking-Ereignis-Validierung dokumentieren |
 | 6 | Reporting | In Umsetzung (Backend-MVP + Härtung Connector-Sync/Export-Streaming) | Nächster Schritt: Connector-Delivery gegen reale Lexoffice/SevDesk/FastBill-Sandboxes mit tenant-spezifischen Secrets und Monitoring abnehmen |
 | 7 | Team & Rechte | In Umsetzung (Rollen-Capability-Mapping-API inkl. tenant-spezifischer Default-Rollenprofile, Audit-Log-UX sowie Multi-Company-Kontextwechsel inkl. Membership-UX End-to-End abgesichert) | Nächster Schritt: Finale Phase-7-Abnahme gegen produktionsnahe Tenant-Daten dokumentieren |
-| 8 | Integrationen | In Umsetzung (Backend-MVP implementiert) | Adapter-Worker + Flutter-Import-Wizard-UI vervollständigen |
+| 8 | Integrationen | In Umsetzung (Backend-Adapter-Worker für Workflow-Runs + Flutter-Import-Wizard-UI inkl. Preview/Execute ergänzt) | Nächster Schritt: Reale HubSpot/Pipedrive/Zapier/Make-Sandbox-Abnahme mit tenant-spezifischen Credentials und Retry-Monitoring dokumentieren |
 | 9 | Katalog/Preise | In Umsetzung (Backend-MVP implementiert) | Flutter-Katalog-UI + Angebotseditor-Integration der Preislogik |
 | 10 | Security/Ops | In Umsetzung (Backend-MVP implementiert) | Worker-gestützte Lösch-/Restore-Jobs + operatives Monitoring verdrahten |
 

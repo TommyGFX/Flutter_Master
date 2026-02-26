@@ -226,6 +226,7 @@ final class App
         $router->add('POST', '/api/billing/automation/time-entries/invoice', [$automationIntegrations, 'invoiceTimeEntries']);
         $router->add('GET', '/api/billing/automation/workflows/catalog', [$automationIntegrations, 'listAutomationCatalog']);
         $router->add('POST', '/api/billing/automation/workflows/runs', [$automationIntegrations, 'enqueueAutomationRun']);
+        $router->add('POST', '/api/billing/automation/workflows/process', [$automationIntegrations, 'processAutomationRuns']);
         $router->add('POST', '/api/billing/automation/import/preview', [$automationIntegrations, 'importPreview']);
         $router->add('POST', '/api/billing/automation/import/execute', [$automationIntegrations, 'executeImport']);
 
