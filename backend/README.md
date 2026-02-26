@@ -63,7 +63,7 @@ Kopiere `.env.example` nach `.env` und passe DB/Stripe/SMTP Werte an.
 - `STRIPE_SECRET_KEY`
 - `STRIPE_CHECKOUT_SUCCESS_URL`
 - `STRIPE_CHECKOUT_CANCEL_URL`
-- `STRIPE_PORTAL_RETURN_URL`
+- `STRIPE_PORTAL_RETURN_URL` (optional, Fallback: `STRIPE_CHECKOUT_SUCCESS_URL`)
 - Optional: `STRIPE_WEBHOOK_SECRET` (für Signaturprüfung)
 
 ### Checkout Session erstellen

@@ -70,7 +70,7 @@ final class StripeService
             throw new InvalidArgumentException('customer_id ist erforderlich.');
         }
 
-        $returnUrl = $this->resolveUrl($payload['return_url'] ?? null, 'STRIPE_PORTAL_RETURN_URL');
+        $returnUrl = $this->resolveCustomerPortalReturnUrl($payload['return_url'] ?? null);
 
         $session = CustomerPortalSession::create([
             'customer' => $customerId,
@@ -326,6 +326,25 @@ final class StripeService
         }
 
         return $this->getRequiredEnv($envKey);
+    }
+
+    private function resolveCustomerPortalReturnUrl(mixed $value): string
+    {
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+
+        $portalReturnUrl = Env::get('STRIPE_PORTAL_RETURN_URL');
+        if (is_string($portalReturnUrl) && $portalReturnUrl !== '') {
+            return $portalReturnUrl;
+        }
+
+        $checkoutSuccessUrl = Env::get('STRIPE_CHECKOUT_SUCCESS_URL');
+        if (is_string($checkoutSuccessUrl) && $checkoutSuccessUrl !== '') {
+            return $checkoutSuccessUrl;
+        }
+
+        throw new InvalidArgumentException('Fehlende Umgebungsvariable: STRIPE_PORTAL_RETURN_URL (alternativ STRIPE_CHECKOUT_SUCCESS_URL).');
     }
 
     private function getRequiredEnv(string $key): string
