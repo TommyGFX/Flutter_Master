@@ -133,6 +133,27 @@ final class OrgManagementService
         return $select->fetch() ?: [];
     }
 
+
+    /** @return array<int, array<string, mixed>> */
+    public function listCompanyMemberships(string $tenantId, string $companyId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT m.company_id, m.user_id, m.role_key, c.name AS company_name
+             FROM org_company_memberships m
+             INNER JOIN org_companies c
+                ON c.tenant_id = m.tenant_id
+                AND c.company_id = m.company_id
+             WHERE m.tenant_id = :tenant_id AND m.company_id = :company_id
+             ORDER BY m.user_id ASC'
+        );
+        $stmt->execute([
+            'tenant_id' => $tenantId,
+            'company_id' => $companyId,
+        ]);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
     public function assignMembership(string $tenantId, string $companyId, array $payload): array
     {
         $userId = trim((string) ($payload['user_id'] ?? ''));

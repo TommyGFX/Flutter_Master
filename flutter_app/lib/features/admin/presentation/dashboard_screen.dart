@@ -92,6 +92,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   _PluginLifecycleCard(),
                   _RolePermissionCard(),
+                  _MultiCompanyContextCard(),
                   _ApprovalCard(),
                   _PlatformInsightsCard(),
                   _AccountsCard(),
@@ -151,12 +152,13 @@ class _SideNav extends StatelessWidget {
         ),
         _NavTile(label: l10n.pluginLifecycle, icon: Icons.extension_outlined, selected: selectedIndex == 2, onTap: () => onSelect(2)),
         _NavTile(label: l10n.permissionsManagement, icon: Icons.lock_outline, selected: selectedIndex == 3, onTap: () => onSelect(3)),
-        _NavTile(label: l10n.approvalsAudit, icon: Icons.approval_outlined, selected: selectedIndex == 4, onTap: () => onSelect(4)),
-        _NavTile(label: l10n.platformInsights, icon: Icons.query_stats_outlined, selected: selectedIndex == 5, onTap: () => onSelect(5)),
-        _NavTile(label: l10n.usersCustomers, icon: Icons.groups_outlined, selected: selectedIndex == 6, onTap: () => onSelect(6)),
-        _NavTile(label: 'Billing E2E (Phase 1)', icon: Icons.receipt_long_outlined, selected: selectedIndex == 7, onTap: () => onSelect(7)),
-        _NavTile(label: 'Abo-Management (Phase 4)', icon: Icons.subscriptions_outlined, selected: selectedIndex == 8, onTap: () => onSelect(8)),
-        _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 9, onTap: () => onSelect(9)),
+        _NavTile(label: 'Multi-Company Kontext', icon: Icons.domain_outlined, selected: selectedIndex == 4, onTap: () => onSelect(4)),
+        _NavTile(label: l10n.approvalsAudit, icon: Icons.approval_outlined, selected: selectedIndex == 5, onTap: () => onSelect(5)),
+        _NavTile(label: l10n.platformInsights, icon: Icons.query_stats_outlined, selected: selectedIndex == 6, onTap: () => onSelect(6)),
+        _NavTile(label: l10n.usersCustomers, icon: Icons.groups_outlined, selected: selectedIndex == 7, onTap: () => onSelect(7)),
+        _NavTile(label: 'Billing E2E (Phase 1)', icon: Icons.receipt_long_outlined, selected: selectedIndex == 8, onTap: () => onSelect(8)),
+        _NavTile(label: 'Abo-Management (Phase 4)', icon: Icons.subscriptions_outlined, selected: selectedIndex == 9, onTap: () => onSelect(9)),
+        _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 10, onTap: () => onSelect(10)),
         ListTile(
           leading: const Icon(Icons.dataset_outlined),
           title: Text(l10n.crudPlayground),
@@ -191,6 +193,7 @@ mixin _ApiClientMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     final authState = ref.read(authControllerProvider);
     final headers = <String, String>{
       'X-Tenant-Id': authState.tenantId ?? 'tenant_1',
+      if ((authState.companyId ?? '').isNotEmpty) 'X-Company-Id': authState.companyId!,
       'X-Permissions': authState.permissions.join(','),
       if ((authState.userId ?? '').isNotEmpty) 'X-User-Id': authState.userId!,
       if ((authState.token ?? '').isNotEmpty) 'Authorization': 'Bearer ${authState.token}',
@@ -227,6 +230,7 @@ class _AdminOverview extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(l10n.tenantValue(authState.tenantId ?? l10n.notSet)),
             Text(l10n.entrypointValue(authState.entrypoint ?? '-')),
+            Text('Company-Kontext: ${authState.companyId ?? l10n.notSet}'),
             Text(l10n.permissionsValue(authState.permissions.isEmpty ? l10n.none : authState.permissions.join(', '))),
             const SizedBox(height: 12),
             Wrap(
@@ -864,6 +868,207 @@ class _RolePermissionCardState extends ConsumerState<_RolePermissionCard> with _
                   ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+
+
+class _MultiCompanyContextCard extends ConsumerStatefulWidget {
+  const _MultiCompanyContextCard();
+
+  @override
+  ConsumerState<_MultiCompanyContextCard> createState() => _MultiCompanyContextCardState();
+}
+
+class _MultiCompanyContextCardState extends ConsumerState<_MultiCompanyContextCard> with _ApiClientMixin {
+  final userIdCtrl = TextEditingController();
+  String? selectedCompanyId;
+  String? selectedRoleKey;
+  List<Map<String, dynamic>> companies = [];
+  List<Map<String, dynamic>> memberships = [];
+  List<Map<String, dynamic>> roles = [];
+  bool loading = true;
+  String? error;
+  String message = '';
+
+  @override
+  void initState() {
+    super.initState();
+    userIdCtrl.text = ref.read(authControllerProvider).userId ?? '';
+    loadData();
+  }
+
+  @override
+  void dispose() {
+    userIdCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadData() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      final dio = ref.read(dioProvider);
+      final companiesResponse = await dio.get('/org/companies', options: buildOptions());
+      final rolesResponse = await dio.get('/org/roles', options: buildOptions());
+      final companyData = (companiesResponse.data['data'] as List<dynamic>? ?? const [])
+          .map((entry) => Map<String, dynamic>.from(entry as Map))
+          .toList(growable: false);
+      final roleData = (rolesResponse.data['data'] as List<dynamic>? ?? const [])
+          .map((entry) => Map<String, dynamic>.from(entry as Map))
+          .toList(growable: false);
+
+      setState(() {
+        companies = companyData;
+        roles = roleData;
+        selectedCompanyId ??= companies.isEmpty ? null : companies.first['company_id']?.toString();
+        selectedRoleKey ??= roles.isEmpty ? null : roles.first['role_key']?.toString();
+      });
+
+      await loadMemberships();
+    } on DioException catch (exception) {
+      setState(() => error = exception.response?.data.toString() ?? exception.message);
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> loadMemberships() async {
+    if ((selectedCompanyId ?? '').isEmpty) {
+      setState(() => memberships = []);
+      return;
+    }
+
+    final dio = ref.read(dioProvider);
+    final response = await dio.get('/org/companies/$selectedCompanyId/memberships', options: buildOptions());
+    final membershipData = (response.data['data'] as List<dynamic>? ?? const [])
+        .map((entry) => Map<String, dynamic>.from(entry as Map))
+        .toList(growable: false);
+
+    setState(() {
+      memberships = membershipData;
+    });
+  }
+
+  Future<void> assignMembership() async {
+    if ((selectedCompanyId ?? '').isEmpty || (selectedRoleKey ?? '').isEmpty || userIdCtrl.text.trim().isEmpty) {
+      return;
+    }
+
+    final dio = ref.read(dioProvider);
+    await dio.put(
+      '/org/companies/$selectedCompanyId/memberships',
+      data: {
+        'user_id': userIdCtrl.text.trim(),
+        'role_key': selectedRoleKey,
+      },
+      options: buildOptions(),
+    );
+
+    setState(() {
+      message = 'Membership gespeichert.';
+    });
+    await loadMemberships();
+  }
+
+  Future<void> switchContext() async {
+    if ((selectedCompanyId ?? '').isEmpty) {
+      return;
+    }
+
+    final dio = ref.read(dioProvider);
+    final response = await dio.post(
+      '/org/context/switch',
+      data: {'company_id': selectedCompanyId},
+      options: buildOptions(),
+    );
+
+    final data = Map<String, dynamic>.from(response.data['data'] as Map? ?? const {});
+    final permissions = (data['permissions'] as List<dynamic>? ?? const [])
+        .map((entry) => entry.toString())
+        .toList(growable: false);
+
+    ref.read(authControllerProvider.notifier).applyCompanyContext(
+          companyId: data['company_id']?.toString() ?? selectedCompanyId!,
+          permissions: permissions,
+        );
+
+    setState(() {
+      message = 'Kontextwechsel aktiv: ${data['company_name'] ?? selectedCompanyId}';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Multi-Company Kontextwechsel & Membership UX', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            DropdownButtonFormField<String>(
+              value: selectedCompanyId,
+              decoration: const InputDecoration(labelText: 'Company'),
+              items: companies
+                  .map((company) => DropdownMenuItem<String>(
+                        value: company['company_id']?.toString(),
+                        child: Text('${company['name']} (${company['company_id']})'),
+                      ))
+                  .toList(growable: false),
+              onChanged: (value) async {
+                setState(() => selectedCompanyId = value);
+                await loadMemberships();
+              },
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(width: 240, child: TextField(controller: userIdCtrl, decoration: const InputDecoration(labelText: 'User ID'))),
+                SizedBox(
+                  width: 240,
+                  child: DropdownButtonFormField<String>(
+                    value: selectedRoleKey,
+                    decoration: const InputDecoration(labelText: 'Rolle'),
+                    items: roles
+                        .map((role) => DropdownMenuItem<String>(
+                              value: role['role_key']?.toString(),
+                              child: Text(role['name']?.toString() ?? role['role_key']?.toString() ?? '-'),
+                            ))
+                        .toList(growable: false),
+                    onChanged: (value) => setState(() => selectedRoleKey = value),
+                  ),
+                ),
+                FilledButton(onPressed: assignMembership, child: const Text('Membership speichern')),
+                OutlinedButton(onPressed: switchContext, child: const Text('Kontext wechseln')),
+              ],
+            ),
+            if (message.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(message),
+            ],
+            const SizedBox(height: 12),
+            Text('Memberships', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (memberships.isEmpty)
+              const Text('Keine Memberships vorhanden.')
+            else
+              ...memberships.map((entry) => Text('• ${entry['user_id']} → ${entry['role_key']}')).toList(growable: false),
+          ],
+        ),
       ),
     );
   }

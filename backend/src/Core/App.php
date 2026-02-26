@@ -205,6 +205,7 @@ final class App
 
         $router->add('GET', '/api/org/companies', [$orgManagement, 'listCompanies']);
         $router->add('POST', '/api/org/companies', [$orgManagement, 'upsertCompany']);
+        $router->add('GET', '/api/org/companies/{companyId}/memberships', [$orgManagement, 'listMemberships']);
         $router->add('PUT', '/api/org/companies/{companyId}/memberships', [$orgManagement, 'assignMembership']);
         $router->add('POST', '/api/org/context/switch', [$orgManagement, 'switchContext']);
         $router->add('GET', '/api/org/roles', [$orgManagement, 'listRoles']);
