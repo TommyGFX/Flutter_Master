@@ -1,26 +1,26 @@
 {
-  "@@locale": "de",
+  "@@locale": "en",
   "appTitle": "Flutter Master SaaS",
   "loginHeadline": "🚀 Flutter Master SaaS Login",
-  "tenantIdLabel": "Tenant-ID",
-  "emailLabel": "E-Mail",
-  "passwordLabel": "Passwort",
-  "signIn": "Anmelden",
-  "companyLogin": "🏢 Firmen-Login",
-  "employeeLogin": "👨‍💼 Mitarbeiter-Login",
-  "portalLogin": "🧑 Kundenportal-Login",
-  "superadminLogin": "🛡️ Superadmin-Login",
+  "tenantIdLabel": "Tenant ID",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "signIn": "Sign in",
+  "companyLogin": "🏢 Company Login",
+  "employeeLogin": "👨‍💼 Employee Login",
+  "portalLogin": "🧑 Customer Portal Login",
+  "superadminLogin": "🛡️ Superadmin Login",
   "controlCenter": "SaaS Control Center",
-  "adminNavigation": "Admin-Navigation",
-  "overview": "Übersicht",
+  "adminNavigation": "Admin Navigation",
+  "overview": "Overview",
   "pluginLifecycle": "Plugin Lifecycle",
-  "permissionsManagement": "Rechteverwaltung",
+  "permissionsManagement": "Permission Management",
   "approvalsAudit": "Approvals & Audit",
   "platformInsights": "Platform Insights",
-  "usersCustomers": "User & Customer",
+  "usersCustomers": "Users & Customers",
   "billingPdfMail": "Billing / PDF / Mail",
   "crudPlayground": "CRUD Playground",
-  "tenantOverview": "Mandantenfähige Übersicht",
+  "tenantOverview": "Tenant Overview",
   "tenantValue": "Tenant: {tenant}",
   "@tenantValue": {
     "placeholders": {
@@ -33,54 +33,54 @@
       "entrypoint": {}
     }
   },
-  "permissionsValue": "Berechtigungen: {permissions}",
+  "permissionsValue": "Permissions: {permissions}",
   "@permissionsValue": {
     "placeholders": {
       "permissions": {}
     }
   },
-  "notSet": "nicht gesetzt",
-  "none": "keine",
+  "notSet": "not set",
+  "none": "none",
   "chipPlugins": "Plugins + RBAC + Approval Flow",
   "chipInsights": "Platform Insights + Impersonation",
   "chipUsers": "Users + Customers + Self Profile",
   "chipAutomation": "Stripe + PDF + Mail + CRUD",
-  "errorWithMessage": "Fehler: {message}",
+  "errorWithMessage": "Error: {message}",
   "@errorWithMessage": {
     "placeholders": {
       "message": {}
     }
   },
-  "noPlugins": "Keine Plugins für diesen Tenant registriert.",
+  "noPlugins": "No plugins registered for this tenant.",
   "pluginSubtitle": "Key: {key} (Flow: Approval)",
   "@pluginSubtitle": {
     "placeholders": {
       "key": {}
     }
   },
-  "permissionsCommaSeparated": "Permissions (kommagetrennt)",
-  "submitApproval": "Änderung als Approval einreichen",
-  "loadApprovals": "Approvals laden",
-  "approveDemo": "Demo: Approval #1 bestätigen",
-  "rejectDemo": "Demo: Approval #1 ablehnen",
+  "permissionsCommaSeparated": "Permissions (comma-separated)",
+  "submitApproval": "Submit change as approval",
+  "loadApprovals": "Load approvals",
+  "approveDemo": "Demo: Approve approval #1",
+  "rejectDemo": "Demo: Reject approval #1",
   "adminStats": "Admin Stats",
   "auditLogs": "Audit Logs",
   "reports": "Reports",
-  "tenantForImpersonation": "Tenant für Impersonation",
+  "tenantForImpersonation": "Tenant for impersonation",
   "impersonate": "Impersonate",
   "tenantAdminUserProfile": "Tenant Admin, User, Customer, Self Profile",
   "adminUsersGet": "Admin Users (GET)",
   "customersGet": "Customers (GET)",
   "selfProfileGet": "Self Profile (GET)",
-  "createDemoUser": "Demo-User erstellen",
-  "createDemoCustomer": "Demo-Customer erstellen",
-  "automationTitle": "Stripe / PDF / Email Integrationen",
+  "createDemoUser": "Create demo user",
+  "createDemoCustomer": "Create demo customer",
+  "automationTitle": "Stripe / PDF / Email Integrations",
   "stripeCheckout": "Stripe Checkout Session",
   "stripePortal": "Stripe Customer Portal",
   "pdfRender": "PDF Render",
   "emailSend": "Email Send",
-  "noResponseYet": "Noch keine Antwort geladen.",
+  "noResponseYet": "No response loaded yet.",
   "crudTitle": "🗂️ CRUD",
   "nameLabel": "Name",
-  "create": "Erstellen"
+  "create": "Create"
 }

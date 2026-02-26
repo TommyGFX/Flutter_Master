@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
 
 void main() {
   runApp(const ProviderScope(child: FlutterMasterApp()));
@@ -15,16 +16,17 @@ class FlutterMasterApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Master SaaS',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('de')],
+      supportedLocales: AppLocalizations.supportedLocales,
       onGenerateRoute: AppRouter.onGenerateRoute,
       initialRoute: '/login',
     );

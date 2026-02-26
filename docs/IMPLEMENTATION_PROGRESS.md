@@ -158,3 +158,10 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - API-Aufrufe in der UI vereinheitlicht (Tenant-/Permission-/Bearer-Header) zur konsistenten Nutzung aller Backend-Funktionen im Frontend.
 - UI-Design stärker auf Theme-gesteuerte Komponenten umgestellt (Cards, Inputs, Buttons, Chips) gemäß Flutter 3.41 Material-3-Standard.
 - `AppTheme` erweitert, damit visuelle Anpassungen zentral über Theme-Konfiguration erfolgen.
+
+## Schritt 14 – Frontend i18n-Refactoring + Review + API-Dokumentation (abgeschlossen)
+- Frontend-UI (Login, Dashboard, CRUD) auf lokalisierbare Strings umgestellt.
+- Lokalisierungsstruktur für Deutsch/Englisch zentralisiert (`lib/l10n`).
+- `MaterialApp` auf Lokalisierungs-Delegates und lokalisierte App-Titel umgestellt.
+- Senior-Code-Review nach Flutter-3.41-Richtlinien dokumentiert und technische Verbesserungen umgesetzt (u. a. Controller-Disposal).
+- Vollständige Frontend-API-Dokumentation inkl. Auth-, Admin-, Platform-, Integrations- und CRUD-Endpunkten ergänzt (`docs/FRONTEND_I18N_CODE_REVIEW_AND_API.md`).
