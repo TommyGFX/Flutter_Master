@@ -1031,3 +1031,114 @@ CREATE TABLE IF NOT EXISTS catalog_discount_codes (
     UNIQUE KEY uq_catalog_discount_code (tenant_id, code),
     INDEX idx_catalog_discount_codes_active (tenant_id, is_active, applies_to)
 );
+
+CREATE TABLE IF NOT EXISTS platform_security_retention_rules (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL DEFAULT 'platform_security_ops',
+    retention_key VARCHAR(128) NOT NULL,
+    retention_days INT NOT NULL DEFAULT 0,
+    legal_basis VARCHAR(255) NULL,
+    is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_platform_security_retention_rule (tenant_id, retention_key)
+);
+
+CREATE TABLE IF NOT EXISTS platform_security_data_exports (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    request_id CHAR(32) NOT NULL,
+    subject_type VARCHAR(32) NOT NULL,
+    subject_id VARCHAR(128) NOT NULL,
+    export_format VARCHAR(16) NOT NULL DEFAULT 'json',
+    status VARCHAR(32) NOT NULL DEFAULT 'queued',
+    payload_json JSON NULL,
+    generated_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_platform_security_data_export_request (tenant_id, request_id),
+    INDEX idx_platform_security_data_exports_subject (tenant_id, subject_type, subject_id, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS platform_security_deletion_requests (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    request_id CHAR(32) NOT NULL,
+    subject_type VARCHAR(32) NOT NULL,
+    subject_id VARCHAR(128) NOT NULL,
+    reason VARCHAR(255) NULL,
+    retention_days INT NOT NULL DEFAULT 30,
+    deletion_due_at TIMESTAMP NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'scheduled',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_platform_security_deletion_request (tenant_id, request_id),
+    INDEX idx_platform_security_deletion_due (tenant_id, status, deletion_due_at)
+);
+
+CREATE TABLE IF NOT EXISTS platform_security_auth_policies (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    auth_scope VARCHAR(32) NOT NULL,
+    mfa_mode VARCHAR(16) NOT NULL DEFAULT 'optional',
+    sso_provider VARCHAR(16) NULL,
+    sso_config_json JSON NULL,
+    is_enforced TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_platform_security_auth_policy (tenant_id, auth_scope)
+);
+
+CREATE TABLE IF NOT EXISTS platform_security_backups (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    backup_id CHAR(32) NOT NULL,
+    backup_type VARCHAR(16) NOT NULL DEFAULT 'full',
+    storage_key VARCHAR(255) NOT NULL,
+    checksum CHAR(64) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'queued',
+    metadata_json JSON NULL,
+    started_at TIMESTAMP NULL,
+    completed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_platform_security_backup (tenant_id, backup_id),
+    INDEX idx_platform_security_backups_status (tenant_id, status, started_at)
+);
+
+CREATE TABLE IF NOT EXISTS platform_security_restore_jobs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    restore_id CHAR(32) NOT NULL,
+    backup_id CHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'queued',
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    UNIQUE KEY uq_platform_security_restore (tenant_id, restore_id),
+    INDEX idx_platform_security_restore_backup (tenant_id, backup_id, requested_at)
+);
+
+CREATE TABLE IF NOT EXISTS platform_security_archive_records (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    record_id CHAR(32) NOT NULL,
+    document_type VARCHAR(64) NOT NULL,
+    document_id BIGINT UNSIGNED NOT NULL,
+    version_number INT NOT NULL DEFAULT 1,
+    integrity_hash CHAR(64) NOT NULL,
+    retention_until DATE NULL,
+    metadata_json JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_platform_security_archive_record (tenant_id, record_id),
+    INDEX idx_platform_security_archive_document (tenant_id, document_type, document_id, version_number)
+);
+
+CREATE TABLE IF NOT EXISTS platform_security_reliability_policies (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    policy_key VARCHAR(32) NOT NULL,
+    config_json JSON NOT NULL,
+    is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_platform_security_reliability_policy (tenant_id, policy_key)
+);
