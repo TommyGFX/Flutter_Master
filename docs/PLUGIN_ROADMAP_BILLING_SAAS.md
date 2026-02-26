@@ -89,6 +89,8 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 
 **Abnahme Phase 2:** Automatisierter Forderungsprozess von Fälligkeit bis Mahnstufe.
 
+_Status-Update (Implementierung):_ Payment-Provider-Abstraktion via Adapter-Pattern (Stripe/PayPal) sowie Mahnstufen-Regression (Tagesdrossel je Fall + automatisierter Regressionstest) sind umgesetzt.
+
 ---
 
 ## Phase 3 – Steuern & Compliance (DACH/DE)

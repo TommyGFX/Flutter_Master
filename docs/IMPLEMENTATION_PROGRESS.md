@@ -458,3 +458,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Roadmap Phase 1 auf **Abgeschlossen** gesetzt und nächster Schritt für Phase 2 konkretisiert.
 
 **Abnahme-Status Schritt 30:** Die in der Roadmap geforderte Phase-1-Abnahme (Nummernkreis/Mehrwährung/PDF-Export im E2E-Flow) ist fachlich und testseitig dokumentiert abgeschlossen.
+
+
+## Schritt 21 – PLUGIN_ROADMAP Phase 2 E2E-Härtung (Payment-Provider-Adapter + Mahnstufen-Regression) umgesetzt (abgeschlossen)
+- Payment-Provider-Abstraktion im Plugin **`billing_payments`** formalisiert:
+  - Neue Adapter-Schnittstelle `PaymentProviderAdapterInterface` für provider-neutrale Zahlungslink-Erstellung.
+  - Konkrete Provider-Adapter für **Stripe** und **PayPal** (`StripePaymentProviderAdapter`, `PayPalPaymentProviderAdapter`).
+  - Registry-basierte Provider-Auflösung über `PaymentProviderRegistry` mit validierter Provider-Liste.
+- `BillingPaymentsService` auf Adapter-basierte Zahlungslink-Erstellung umgestellt (Contract-first statt Inline-Provider-Branching).
+- Mahnstufen-Regression abgesichert:
+  - Dunning-Eskalation wird pro Fall auf maximal eine Stufe je Kalendertag gedrosselt (Schutz vor Mehrfach-Läufen).
+  - Öffentliche Prüf-Funktion `isDunningEscalationDue(...)` für reproduzierbare Regressionstests ergänzt.
+- Regressionstest für Phase 2 ergänzt (`backend/tests/Regression/billing_payments_phase2_regression_test.php`):
+  - Stripe-/PayPal-Adapter-Mapping, Registry-Fehlerpfad und Mahnstufen-Tagesdrossel werden automatisiert validiert.
+
+**Abnahme-Status Phase 2 (Härtung):** Payment-Provider-Abstraktion ist explizit definiert und Mahnstufen-Läufe sind regressionsgesichert (kein unbeabsichtigtes Mehrfach-Eskalieren am selben Tag).

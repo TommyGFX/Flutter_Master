@@ -142,3 +142,30 @@ Dieser Schritt gilt als erledigt, wenn:
 2. die Contract-Inhalte mit bestehender Implementierung konsistent sind,
 3. die Fortschrittsdokumentation den Status auf „schriftlich fixiert“ aktualisiert.
 
+
+## 9) Payment-Provider-Abstraktion (Phase 2, billing_payments)
+
+### 9.1 Ziel
+Zahlungsanbieter werden hinter einem stabilen Adapter-Contract gekapselt, damit neue Provider ohne Änderung der Billing-Core-Domainlogik ergänzt werden können.
+
+### 9.2 Adapter-Contract
+Jeder Payment-Provider implementiert die Schnittstelle:
+- `providerKey(): string`
+- `createPaymentLink(array $payload, array $document): array`
+
+Normatives Rückgabeformat von `createPaymentLink(...)`:
+- `payment_link_id` (string, provider-eindeutige externe ID)
+- `payment_url` (string, Checkout-/Approval-URL)
+- `status` (`open | paid | expired | cancelled`)
+- `provider_response_json` (nullable string; optionales Roh-Providerpayload)
+- `expires_at` (nullable string, ISO-/DB-kompatibel)
+
+### 9.3 Provider-Registry
+- Provider-Auflösung erfolgt zentral über `PaymentProviderRegistry`.
+- Ungültige Provider müssen mit `invalid_provider` abgelehnt werden.
+- Phase-2 Baseline-Provider: `stripe`, `paypal`.
+
+### 9.4 Dunning-Regression (Contractregel)
+- Mahnstufen-Eskalation darf pro Dokumentfall höchstens einmal je Kalendertag erfolgen.
+- Mehrfachläufe des Dunning-Jobs am selben Tag dürfen keine zusätzliche Stufenerhöhung erzeugen.
+
