@@ -12,6 +12,7 @@ use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
 use App\Controllers\PlatformAdminController;
+use App\Controllers\PluginFoundationController;
 use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
@@ -44,6 +45,7 @@ final class App
         $adminPlugins = new AdminPluginController(new RbacService(), new ApprovalService(), new AuditLogService());
         $platformAdmin = new PlatformAdminController(new JwtService(), new RefreshTokenService(), new AuditLogService());
         $accounts = new AccountManagementController();
+        $pluginFoundation = new PluginFoundationController(new RbacService());
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -69,11 +71,17 @@ final class App
 
         $router->add('GET', '/api/admin/plugins', [$adminPlugins, 'index']);
         $router->add('POST', '/api/admin/plugins/{plugin}/status', [$adminPlugins, 'setStatus']);
+        $router->add('PUT', '/api/admin/plugins/{plugin}/lifecycle', [$pluginFoundation, 'updateLifecycle']);
         $router->add('GET', '/api/admin/roles/permissions', [$adminPlugins, 'listRolePermissions']);
         $router->add('PUT', '/api/admin/roles/{roleKey}/permissions', [$adminPlugins, 'updateRolePermissions']);
         $router->add('GET', '/api/admin/approvals', [$adminPlugins, 'listApprovals']);
         $router->add('POST', '/api/admin/approvals/{approvalId}/approve', [$adminPlugins, 'approve']);
         $router->add('POST', '/api/admin/approvals/{approvalId}/reject', [$adminPlugins, 'reject']);
+        $router->add('GET', '/api/admin/plugin-shell', [$pluginFoundation, 'pluginShell']);
+        $router->add('GET', '/api/admin/feature-flags', [$pluginFoundation, 'listFeatureFlags']);
+        $router->add('PUT', '/api/admin/feature-flags/{flagKey}', [$pluginFoundation, 'setFeatureFlag']);
+        $router->add('POST', '/api/admin/domain-events', [$pluginFoundation, 'publishDomainEvent']);
+        $router->add('POST', '/api/admin/outbox/process', [$pluginFoundation, 'processOutbox']);
 
         $router->add('POST', '/api/platform/impersonate/company', [$platformAdmin, 'impersonateCompany']);
         $router->add('GET', '/api/platform/admin-stats', [$platformAdmin, 'adminStats']);
@@ -110,7 +118,7 @@ final class App
             header('Vary: Origin');
         }
 
-        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-Id, X-User-Id, X-Permissions, X-Approval-Status, Stripe-Signature');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-Id, X-Company-Id, X-User-Id, X-Permissions, X-Approval-Status, Stripe-Signature');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Credentials: true');
     }

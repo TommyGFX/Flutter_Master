@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS plugin_routes (
     permission_key VARCHAR(128) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS plugin_definitions (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    plugin_key VARCHAR(128) NOT NULL,
+    version VARCHAR(32) NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    capabilities_json JSON NOT NULL,
+    required_permissions_json JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_plugin_definition_key (plugin_key)
+);
+
 CREATE TABLE IF NOT EXISTS plugin_hooks (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL,
@@ -52,9 +64,57 @@ CREATE TABLE IF NOT EXISTS tenant_plugins (
     tenant_id VARCHAR(64) NOT NULL,
     plugin_key VARCHAR(128) NOT NULL,
     display_name VARCHAR(255) NOT NULL,
+    version VARCHAR(32) NOT NULL DEFAULT '1.0.0',
+    lifecycle_status VARCHAR(16) NOT NULL DEFAULT 'installed',
+    capabilities_json JSON NULL,
+    required_permissions_json JSON NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_tenant_plugin (tenant_id, plugin_key)
+);
+
+CREATE TABLE IF NOT EXISTS tenant_feature_flags (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    company_id VARCHAR(64) NOT NULL DEFAULT 'default',
+    flag_key VARCHAR(128) NOT NULL,
+    flag_value TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenant_company_flag (tenant_id, company_id, flag_key)
+);
+
+CREATE TABLE IF NOT EXISTS domain_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    event_name VARCHAR(128) NOT NULL,
+    aggregate_type VARCHAR(64) NOT NULL,
+    aggregate_id VARCHAR(128) NOT NULL,
+    payload_json JSON NOT NULL,
+    event_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    available_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP NULL,
+    INDEX idx_domain_event_tenant_status (tenant_id, event_status, available_at),
+    INDEX idx_domain_event_name (event_name, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS outbox_messages (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    domain_event_id BIGINT UNSIGNED NOT NULL,
+    destination VARCHAR(64) NOT NULL,
+    message_key VARCHAR(191) NOT NULL,
+    payload_json JSON NOT NULL,
+    delivery_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    retry_count INT NOT NULL DEFAULT 0,
+    last_error VARCHAR(512) NULL,
+    next_retry_at TIMESTAMP NULL,
+    processed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_outbox_message_key (message_key),
+    INDEX idx_outbox_delivery (delivery_status, next_retry_at, created_at),
+    CONSTRAINT fk_outbox_domain_event FOREIGN KEY (domain_event_id) REFERENCES domain_events (id)
 );
 
 CREATE TABLE IF NOT EXISTS email_templates (

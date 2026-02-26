@@ -53,6 +53,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 index: selectedIndex,
                 children: const [
                   _AdminOverview(),
+                  _PluginShellCard(),
                   _PluginLifecycleCard(),
                   _RolePermissionCard(),
                   _ApprovalCard(),
@@ -83,12 +84,13 @@ class _SideNav extends StatelessWidget {
       children: [
         DrawerHeader(child: Text(l10n.adminNavigation)),
         _NavTile(label: l10n.overview, icon: Icons.home_outlined, selected: selectedIndex == 0, onTap: () => onSelect(0)),
-        _NavTile(label: l10n.pluginLifecycle, icon: Icons.extension_outlined, selected: selectedIndex == 1, onTap: () => onSelect(1)),
-        _NavTile(label: l10n.permissionsManagement, icon: Icons.lock_outline, selected: selectedIndex == 2, onTap: () => onSelect(2)),
-        _NavTile(label: l10n.approvalsAudit, icon: Icons.approval_outlined, selected: selectedIndex == 3, onTap: () => onSelect(3)),
-        _NavTile(label: l10n.platformInsights, icon: Icons.query_stats_outlined, selected: selectedIndex == 4, onTap: () => onSelect(4)),
-        _NavTile(label: l10n.usersCustomers, icon: Icons.groups_outlined, selected: selectedIndex == 5, onTap: () => onSelect(5)),
-        _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 6, onTap: () => onSelect(6)),
+        _NavTile(label: 'Plugin Shell', icon: Icons.view_sidebar_outlined, selected: selectedIndex == 1, onTap: () => onSelect(1)),
+        _NavTile(label: l10n.pluginLifecycle, icon: Icons.extension_outlined, selected: selectedIndex == 2, onTap: () => onSelect(2)),
+        _NavTile(label: l10n.permissionsManagement, icon: Icons.lock_outline, selected: selectedIndex == 3, onTap: () => onSelect(3)),
+        _NavTile(label: l10n.approvalsAudit, icon: Icons.approval_outlined, selected: selectedIndex == 4, onTap: () => onSelect(4)),
+        _NavTile(label: l10n.platformInsights, icon: Icons.query_stats_outlined, selected: selectedIndex == 5, onTap: () => onSelect(5)),
+        _NavTile(label: l10n.usersCustomers, icon: Icons.groups_outlined, selected: selectedIndex == 6, onTap: () => onSelect(6)),
+        _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 7, onTap: () => onSelect(7)),
         ListTile(
           leading: const Icon(Icons.dataset_outlined),
           title: Text(l10n.crudPlayground),
@@ -170,6 +172,88 @@ class _AdminOverview extends ConsumerWidget {
                 Chip(label: Text(l10n.chipAutomation)),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PluginShellCard extends ConsumerStatefulWidget {
+  const _PluginShellCard();
+
+  @override
+  ConsumerState<_PluginShellCard> createState() => _PluginShellCardState();
+}
+
+class _PluginShellCardState extends ConsumerState<_PluginShellCard> with _ApiClientMixin {
+  bool isLoading = true;
+  String? error;
+  List<Map<String, dynamic>> plugins = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadShell();
+  }
+
+  Future<void> loadShell() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.get('/admin/plugin-shell', options: buildOptions());
+      final data = (response.data['data'] as List<dynamic>? ?? const [])
+          .map((plugin) => Map<String, dynamic>.from(plugin as Map))
+          .toList(growable: false);
+
+      setState(() => plugins = data);
+    } on DioException catch (exception) {
+      setState(() => error = exception.response?.data.toString() ?? exception.message);
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text('Plugin Shell', style: Theme.of(context).textTheme.titleLarge)),
+                IconButton(onPressed: loadShell, icon: const Icon(Icons.refresh)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            if (isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (plugins.isEmpty)
+              const Text('Keine sichtbaren Plugins vorhanden.')
+            else
+              Expanded(
+                child: ListView.builder(
+                  itemCount: plugins.length,
+                  itemBuilder: (context, index) {
+                    final plugin = plugins[index];
+                    final capabilities = (plugin['capabilities'] as List<dynamic>? ?? const []).join(', ');
+                    final lifecycleStatus = plugin['lifecycle_status']?.toString() ?? 'installed';
+                    return ListTile(
+                      leading: const Icon(Icons.extension),
+                      title: Text('${plugin['display_name']} (${plugin['version'] ?? '1.0.0'})'),
+                      subtitle: Text('Status: $lifecycleStatus\nCapabilities: ${capabilities.isEmpty ? '-' : capabilities}'),
+                    );
+                  },
+                ),
+              ),
           ],
         ),
       ),
