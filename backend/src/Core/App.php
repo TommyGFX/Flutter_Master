@@ -21,6 +21,7 @@ use App\Controllers\UploadController;
 use App\Controllers\PlatformAdminController;
 use App\Controllers\PluginFoundationController;
 use App\Controllers\AutomationIntegrationsController;
+use App\Controllers\CatalogPricingController;
 use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
@@ -38,6 +39,7 @@ use App\Services\StripeService;
 use App\Services\TemplateRendererService;
 use App\Services\TenantMailerService;
 use App\Services\AutomationIntegrationsService;
+use App\Services\CatalogPricingService;
 
 final class App
 {
@@ -70,6 +72,7 @@ final class App
         $financeReporting = new FinanceReportingController(new FinanceReportingService(Database::connection()));
         $orgManagement = new OrgManagementController(new OrgManagementService(Database::connection()), new RbacService(), new AuditLogService());
         $automationIntegrations = new AutomationIntegrationsController(new AutomationIntegrationsService(Database::connection()));
+        $catalogPricing = new CatalogPricingController(new CatalogPricingService(Database::connection()));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -207,6 +210,21 @@ final class App
         $router->add('POST', '/api/billing/automation/workflows/runs', [$automationIntegrations, 'enqueueAutomationRun']);
         $router->add('POST', '/api/billing/automation/import/preview', [$automationIntegrations, 'importPreview']);
         $router->add('POST', '/api/billing/automation/import/execute', [$automationIntegrations, 'executeImport']);
+
+        $router->add('GET', '/api/billing/catalog/products', [$catalogPricing, 'listProducts']);
+        $router->add('POST', '/api/billing/catalog/products', [$catalogPricing, 'saveProduct']);
+        $router->add('PUT', '/api/billing/catalog/products/{id}', [$catalogPricing, 'updateProduct']);
+        $router->add('GET', '/api/billing/catalog/price-lists', [$catalogPricing, 'listPriceLists']);
+        $router->add('POST', '/api/billing/catalog/price-lists', [$catalogPricing, 'savePriceList']);
+        $router->add('PUT', '/api/billing/catalog/price-lists/{id}', [$catalogPricing, 'updatePriceList']);
+        $router->add('GET', '/api/billing/catalog/price-lists/{id}/items', [$catalogPricing, 'listPriceListItems']);
+        $router->add('POST', '/api/billing/catalog/price-lists/{id}/items', [$catalogPricing, 'savePriceListItem']);
+        $router->add('GET', '/api/billing/catalog/bundles', [$catalogPricing, 'listBundles']);
+        $router->add('POST', '/api/billing/catalog/bundles', [$catalogPricing, 'saveBundle']);
+        $router->add('PUT', '/api/billing/catalog/bundles/{id}', [$catalogPricing, 'updateBundle']);
+        $router->add('GET', '/api/billing/catalog/discount-codes', [$catalogPricing, 'listDiscountCodes']);
+        $router->add('POST', '/api/billing/catalog/discount-codes', [$catalogPricing, 'saveDiscountCode']);
+        $router->add('POST', '/api/billing/catalog/quotes/calculate', [$catalogPricing, 'calculateQuote']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);
