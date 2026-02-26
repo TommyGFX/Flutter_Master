@@ -314,3 +314,26 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - CSV-Export für Audit-Logs als API-Response für nachgelagerte UI-Downloads.
 
 **Abnahme-Status Phase 7:** Multi-Company-Scope, rollenbasiertes Team-Management und auditierbare Governance sind als Backend-MVP umgesetzt. Nächster Ausbau: dedizierte Flutter-Org-Management-Masken mit geführter Kontextumschaltung und Export-UX.
+
+## Schritt 23 – PLUGIN_ROADMAP Phase 8 (Automatisierung & Integrationen) umgesetzt (Backend-MVP)
+- Neues Backend-Plugin-Modul **`automation_integrations`** ergänzt und in das API-Routing integriert.
+- Persistenz für API-First-, Adapter- und Automatisierungs-Workflows erweitert:
+  - `automation_api_versions`, `automation_idempotency_keys` (API-Versionierung + Idempotenz-Registry)
+  - `automation_crm_connectors`, `automation_crm_sync_logs` (HubSpot/Pipedrive-Connectoren + Sync-Queue)
+  - `automation_time_entries` (Stundenzettel/Projektzeiten mit Fakturierungsstatus)
+  - `automation_workflow_catalog`, `automation_workflow_runs` (Zapier/Make Trigger- und Action-Runs)
+  - `automation_import_products`, `automation_import_historical_invoices` (Import-Wizard-Zieldaten)
+- Neue API-Endpunkte für Phase-8-Workflows ergänzt:
+  - API-first: `GET|POST /api/billing/automation/api-versions`, `POST /api/billing/automation/idempotency/claim`
+  - CRM: `GET|PUT /api/billing/automation/crm/connectors`, `POST /api/billing/automation/crm/{provider}/sync`
+  - Time Tracking: `GET|POST /api/billing/automation/time-entries`, `POST /api/billing/automation/time-entries/invoice`
+  - No-Code: `GET /api/billing/automation/workflows/catalog`, `POST /api/billing/automation/workflows/runs`
+  - Import-Wizard: `POST /api/billing/automation/import/preview`, `POST /api/billing/automation/import/execute`
+- Fachlogik in `AutomationIntegrationsService` implementiert:
+  - Konsistente API-Versionpflege mit Deprecation-/Sunset-Metadaten.
+  - Idempotenz-Claiming mit Request-Hash-Konflikterkennung (`idempotency_key_conflict`).
+  - CRM-Provider-Abstraktion (HubSpot/Pipedrive) inkl. Maskierung sensibler Credentials im Read-Modell.
+  - Time-Entry -> Draft-Invoice-Konvertierung mit automatischer Verknüpfung der fakturierten Zeiterfassungen.
+  - No-Code-Workflow-Queueing für Zapier/Make und Import-Wizard-Preview/Execute für Kunden, Produkte und historische Rechnungen.
+
+**Abnahme-Status Phase 8:** Die Integrationsfähigkeit ist als Backend-MVP umgesetzt (API-first, CRM-Adapter, Time-Tracking-Invoicing, No-Code-Automation, Import-Wizard). Für die vollständige Produktabnahme folgen Worker-Ausführung/Retry, Provider-spezifische Mapping-Profile und geführte Flutter-UI-Flows.

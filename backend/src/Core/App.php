@@ -20,6 +20,7 @@ use App\Controllers\StripeController;
 use App\Controllers\UploadController;
 use App\Controllers\PlatformAdminController;
 use App\Controllers\PluginFoundationController;
+use App\Controllers\AutomationIntegrationsController;
 use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
@@ -36,6 +37,7 @@ use App\Services\RbacService;
 use App\Services\StripeService;
 use App\Services\TemplateRendererService;
 use App\Services\TenantMailerService;
+use App\Services\AutomationIntegrationsService;
 
 final class App
 {
@@ -67,6 +69,7 @@ final class App
         $documentDelivery = new DocumentDeliveryController(new DocumentDeliveryService(Database::connection()));
         $financeReporting = new FinanceReportingController(new FinanceReportingService(Database::connection()));
         $orgManagement = new OrgManagementController(new OrgManagementService(Database::connection()), new RbacService(), new AuditLogService());
+        $automationIntegrations = new AutomationIntegrationsController(new AutomationIntegrationsService(Database::connection()));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -189,6 +192,21 @@ final class App
         $router->add('PUT', '/api/org/roles/{roleKey}', [$orgManagement, 'upsertRole']);
         $router->add('GET', '/api/org/audit-logs', [$orgManagement, 'listAuditLogs']);
         $router->add('POST', '/api/org/audit-logs/export', [$orgManagement, 'exportAuditLogs']);
+
+
+        $router->add('GET', '/api/billing/automation/api-versions', [$automationIntegrations, 'listApiVersions']);
+        $router->add('POST', '/api/billing/automation/api-versions', [$automationIntegrations, 'registerApiVersion']);
+        $router->add('POST', '/api/billing/automation/idempotency/claim', [$automationIntegrations, 'claimIdempotency']);
+        $router->add('GET', '/api/billing/automation/crm/connectors', [$automationIntegrations, 'listCrmConnectors']);
+        $router->add('PUT', '/api/billing/automation/crm/connectors', [$automationIntegrations, 'upsertCrmConnector']);
+        $router->add('POST', '/api/billing/automation/crm/{provider}/sync', [$automationIntegrations, 'syncCrmEntity']);
+        $router->add('GET', '/api/billing/automation/time-entries', [$automationIntegrations, 'listTimeEntries']);
+        $router->add('POST', '/api/billing/automation/time-entries', [$automationIntegrations, 'upsertTimeEntry']);
+        $router->add('POST', '/api/billing/automation/time-entries/invoice', [$automationIntegrations, 'invoiceTimeEntries']);
+        $router->add('GET', '/api/billing/automation/workflows/catalog', [$automationIntegrations, 'listAutomationCatalog']);
+        $router->add('POST', '/api/billing/automation/workflows/runs', [$automationIntegrations, 'enqueueAutomationRun']);
+        $router->add('POST', '/api/billing/automation/import/preview', [$automationIntegrations, 'importPreview']);
+        $router->add('POST', '/api/billing/automation/import/execute', [$automationIntegrations, 'executeImport']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);
