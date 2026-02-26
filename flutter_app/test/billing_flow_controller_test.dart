@@ -22,7 +22,27 @@ void main() {
     expect(state.documentStatus, 'paid');
     expect(state.historyEntries, 5);
     expect(state.pdfFilename, 'billing-document-202.pdf');
-    expect(state.steps.length, greaterThanOrEqualTo(7));
+    expect(state.steps.length, greaterThanOrEqualTo(9));
+  });
+
+  test('BillingFlowController validates Nummernkreis/Mehrwährung in E2E flow', () async {
+    final repository = _FakeBillingFlowRepository();
+    final container = ProviderContainer(
+      overrides: [
+        billingFlowRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(billingFlowControllerProvider.notifier).runQuoteToPaidFlow();
+
+    final state = container.read(billingFlowControllerProvider);
+    expect(state.error, isNull);
+    expect(repository.quoteCurrencyCode, 'USD');
+    expect(repository.quoteExchangeRate, 1.08);
+    expect(state.steps.any((step) => step.contains('Nummer: Q-2026-0001')), isTrue);
+    expect(state.steps.any((step) => step.contains('Nummer: R-2026-0001')), isTrue);
+    expect(state.steps.any((step) => step.contains('Währung: USD/1.0800')), isTrue);
   });
 
   test('BillingFlowController reports contextual error for API failures', () async {
@@ -45,14 +65,42 @@ void main() {
 }
 
 class _FakeBillingFlowRepository implements BillingFlowRepository {
+  String? quoteCurrencyCode;
+  double? quoteExchangeRate;
+
   @override
   Future<int> ensureCustomer() async => 1;
 
   @override
-  Future<int> createQuote({required int customerId}) async => 101;
+  Future<int> createQuote({
+    required int customerId,
+    required String currencyCode,
+    required double exchangeRate,
+  }) async {
+    quoteCurrencyCode = currencyCode;
+    quoteExchangeRate = exchangeRate;
+    return 101;
+  }
 
   @override
   Future<String> finalizeDocument(int documentId) async => 'sent';
+
+  @override
+  Future<BillingDocumentSnapshot> fetchDocumentSnapshot(int documentId) async {
+    if (documentId == 101) {
+      return const BillingDocumentSnapshot(
+        documentNumber: 'Q-2026-0001',
+        currencyCode: 'USD',
+        exchangeRate: 1.08,
+      );
+    }
+
+    return const BillingDocumentSnapshot(
+      documentNumber: 'R-2026-0001',
+      currencyCode: 'USD',
+      exchangeRate: 1.08,
+    );
+  }
 
   @override
   Future<int> convertQuoteToInvoice(int quoteId) async => 202;
@@ -72,7 +120,11 @@ class _FakeBillingFlowRepository implements BillingFlowRepository {
 
 class _FailingBillingFlowRepository extends _FakeBillingFlowRepository {
   @override
-  Future<int> createQuote({required int customerId}) async {
+  Future<int> createQuote({
+    required int customerId,
+    required String currencyCode,
+    required double exchangeRate,
+  }) async {
     throw DioException(
       requestOptions: RequestOptions(path: '/billing/documents'),
       response: Response(

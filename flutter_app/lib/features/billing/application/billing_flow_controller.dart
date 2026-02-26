@@ -61,6 +61,9 @@ class BillingFlowState {
 }
 
 class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
+  static const _flowCurrencyCode = 'USD';
+  static const _flowExchangeRate = 1.08;
+
   @override
   BillingFlowState build() => const BillingFlowState();
 
@@ -90,7 +93,11 @@ class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
       _appendStep('Kunde bereit: #$customerId');
 
       final quoteId = await _runStep(
-        action: () => repository.createQuote(customerId: customerId),
+        action: () => repository.createQuote(
+          customerId: customerId,
+          currencyCode: _flowCurrencyCode,
+          exchangeRate: _flowExchangeRate,
+        ),
         errorContext: 'Angebot konnte nicht erstellt werden',
       );
       _appendStep('Angebot erstellt: #$quoteId');
@@ -99,7 +106,17 @@ class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
         action: () => repository.finalizeDocument(quoteId),
         errorContext: 'Angebot konnte nicht finalisiert werden',
       );
-      _appendStep('Angebot finalisiert');
+      final quoteSnapshot = await _runStep(
+        action: () => repository.fetchDocumentSnapshot(quoteId),
+        errorContext: 'Angebot konnte nach Finalisierung nicht geprüft werden',
+      );
+      _assertDocumentChecks(
+        snapshot: quoteSnapshot,
+        context: 'Angebot',
+      );
+      _appendStep(
+        'Angebot finalisiert (Nummer: ${quoteSnapshot.documentNumber}, Währung: ${quoteSnapshot.currencyCode}/${quoteSnapshot.exchangeRate.toStringAsFixed(4)})',
+      );
 
       final invoiceId = await _runStep(
         action: () => repository.convertQuoteToInvoice(quoteId),
@@ -111,7 +128,17 @@ class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
         action: () => repository.finalizeDocument(invoiceId),
         errorContext: 'Rechnung konnte nicht finalisiert werden',
       );
-      _appendStep('Rechnung finalisiert (Status: $invoiceStatus)');
+      final invoiceSnapshot = await _runStep(
+        action: () => repository.fetchDocumentSnapshot(invoiceId),
+        errorContext: 'Rechnung konnte nach Finalisierung nicht geprüft werden',
+      );
+      _assertDocumentChecks(
+        snapshot: invoiceSnapshot,
+        context: 'Rechnung',
+      );
+      _appendStep(
+        'Rechnung finalisiert (Status: $invoiceStatus, Nummer: ${invoiceSnapshot.documentNumber}, Währung: ${invoiceSnapshot.currencyCode}/${invoiceSnapshot.exchangeRate.toStringAsFixed(4)})',
+      );
 
       await _runStep(
         action: () => repository.createPaymentLink(invoiceId),
@@ -181,6 +208,20 @@ class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
   void _appendStep(String message) {
     state = state.copyWith(steps: [...state.steps, message]);
   }
+
+  void _assertDocumentChecks({required BillingDocumentSnapshot snapshot, required String context}) {
+    if ((snapshot.documentNumber ?? '').trim().isEmpty) {
+      throw BillingFlowException('$context-Nummernkreis nicht vergeben');
+    }
+    if (snapshot.currencyCode != _flowCurrencyCode) {
+      throw BillingFlowException('$context-Währung nicht fixiert: erwartet $_flowCurrencyCode, erhalten ${snapshot.currencyCode}');
+    }
+    if ((snapshot.exchangeRate - _flowExchangeRate).abs() > 0.0001) {
+      throw BillingFlowException(
+        '$context-Wechselkurs nicht fixiert: erwartet $_flowExchangeRate, erhalten ${snapshot.exchangeRate}',
+      );
+    }
+  }
 }
 
 class BillingFlowException implements Exception {
@@ -194,8 +235,13 @@ class BillingFlowException implements Exception {
 
 abstract class BillingFlowRepository {
   Future<int> ensureCustomer();
-  Future<int> createQuote({required int customerId});
+  Future<int> createQuote({
+    required int customerId,
+    required String currencyCode,
+    required double exchangeRate,
+  });
   Future<String> finalizeDocument(int documentId);
+  Future<BillingDocumentSnapshot> fetchDocumentSnapshot(int documentId);
   Future<int> convertQuoteToInvoice(int quoteId);
   Future<void> createPaymentLink(int invoiceId);
   Future<String> recordPayment(int invoiceId);
@@ -253,14 +299,19 @@ class ApiBillingFlowRepository implements BillingFlowRepository {
   }
 
   @override
-  Future<int> createQuote({required int customerId}) async {
+  Future<int> createQuote({
+    required int customerId,
+    required String currencyCode,
+    required double exchangeRate,
+  }) async {
     final response = await _dio.post(
       '/billing/documents',
       options: _options(),
       data: {
         'document_type': 'quote',
         'customer_id': customerId,
-        'currency_code': 'EUR',
+        'currency_code': currencyCode,
+        'exchange_rate': exchangeRate,
         'line_items': [
           {
             'position': 1,
@@ -281,6 +332,17 @@ class ApiBillingFlowRepository implements BillingFlowRepository {
   Future<String> finalizeDocument(int documentId) async {
     final response = await _dio.post('/billing/documents/$documentId/finalize', options: _options());
     return response.data['status']?.toString() ?? 'finalized';
+  }
+
+  @override
+  Future<BillingDocumentSnapshot> fetchDocumentSnapshot(int documentId) async {
+    final response = await _dio.get('/billing/documents/$documentId', options: _options());
+    final data = response.data['data'] as Map<String, dynamic>? ?? const {};
+    return BillingDocumentSnapshot(
+      documentNumber: data['document_number']?.toString(),
+      currencyCode: data['currency_code']?.toString() ?? 'EUR',
+      exchangeRate: (data['exchange_rate'] as num?)?.toDouble() ?? 1,
+    );
   }
 
   @override
@@ -329,4 +391,16 @@ class ApiBillingFlowRepository implements BillingFlowRepository {
     final response = await _dio.get('/billing/documents/$documentId/pdf', options: _options());
     return response.data['filename']?.toString();
   }
+}
+
+class BillingDocumentSnapshot {
+  const BillingDocumentSnapshot({
+    required this.documentNumber,
+    required this.currencyCode,
+    required this.exchangeRate,
+  });
+
+  final String? documentNumber;
+  final String currencyCode;
+  final double exchangeRate;
 }

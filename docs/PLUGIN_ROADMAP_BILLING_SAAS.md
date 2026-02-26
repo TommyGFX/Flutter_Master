@@ -252,7 +252,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 | Phase | Fokus | Status | Nächster konkreter Schritt |
 |---|---|---|---|
 | 0 | Plugin-Fundament | **Abgeschlossen** | Kein offener Backlog-Eintrag (erledigte Punkte aus der Aktionsliste entfernt) |
-| 1 | Rechnungen & Dokumente | In Umsetzung (MVP-Backend + Flutter E2E-UI umgesetzt) | Phase-1-Abnahme schließen: Nummernkreis/Mehrwährung/PDF-Export im E2E-Flow durchtesten |
+| 1 | Rechnungen & Dokumente | **Abgeschlossen** (Abnahme via E2E-Flow inkl. Nummernkreis/Mehrwährung/PDF-Export dokumentiert) | Phase 2 End-to-End mit Payment-Provider-Adapter (Stripe/PayPal) + Mahnstufen-Regression absichern |
 | 2 | Payments & Mahnwesen | Geplant | Payment-Provider-Abstraktion definieren |
 | 3 | Tax & Compliance | In Umsetzung (Backend-Basis implementiert) | Preflight-Regeln pro Dokumenttyp fachlich schärfen + XRechnung/ZUGFeRD-Validator ergänzen |
 | 4 | Abos | In Umsetzung (Backend-MVP implementiert) | Provider-Adapter + Flutter Abo-Management-UI ergänzen |
