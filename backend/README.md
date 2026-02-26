@@ -118,3 +118,29 @@ Beispiel-Body:
   "context": {"customer": {"name": "Max"}}
 }
 ```
+
+## RBAC/Plugin Approval-Flow + Audit-Logs (Multi-Tenant)
+Kritische Änderungen werden nicht direkt angewendet, sondern als Approval-Request pro Tenant gespeichert.
+
+### Relevante Header
+- `X-Tenant-Id`: Tenant-Kontext (Pflicht)
+- `X-User-Id`: ausführender User (Pflicht für Approval/Audit)
+- `X-Permissions`: kommaseparierte Permissions (`plugins.manage`, `rbac.manage`, `approvals.manage`)
+- `X-Approval-Status`: optionaler Filter für `GET /api/admin/approvals`
+
+### Endpunkte
+- `GET /api/admin/plugins`
+- `POST /api/admin/plugins/{plugin}/status` → erstellt `pending_approval`
+- `GET /api/admin/roles/permissions`
+- `PUT /api/admin/roles/{roleKey}/permissions` → erstellt `pending_approval`
+- `GET /api/admin/approvals`
+- `POST /api/admin/approvals/{approvalId}/approve`
+- `POST /api/admin/approvals/{approvalId}/reject`
+
+### Persistenz
+- `approval_requests`: Anfrage, Payload, Requester/Approver, Status (`pending|approved|rejected`)
+- `audit_logs`: unveränderbare Audit-Spur je Tenant inkl. Actor, Action, Zielobjekt, IP und User-Agent
+
+Hinweise:
+- Self-Approval ist blockiert (`requested_by !== approved_by`).
+- Die fachliche Änderung (Plugin-Status / Role-Permissions) wird erst bei Approval im selben Tenant ausgeführt.

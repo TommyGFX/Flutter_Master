@@ -109,3 +109,19 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - `checkout.session.completed` (Provisionierung)
   - `customer.subscription.updated|deleted` (Entitlements)
   - `invoice.payment_failed|invoice.paid` (Dunning Open/Resolve)
+
+## Schritt 10 – Persistente Audit-Logs + Approval-Flow für kritische RBAC/Plugin-Änderungen (abgeschlossen)
+- Multi-Tenant Approval-Workflow für kritische Admin-Änderungen umgesetzt:
+  - `POST /api/admin/plugins/{plugin}/status` erstellt nur noch Approval-Requests.
+  - `PUT /api/admin/roles/{roleKey}/permissions` erstellt nur noch Approval-Requests.
+- Neue Decision-Endpunkte ergänzt:
+  - `GET /api/admin/approvals`
+  - `POST /api/admin/approvals/{approvalId}/approve`
+  - `POST /api/admin/approvals/{approvalId}/reject`
+- Persistente Datenhaltung ergänzt:
+  - `approval_requests` für beantragte/freigegebene/abgelehnte Änderungen.
+  - `audit_logs` für revisionssichere Ereignisspur inkl. Tenant, Actor, IP und User-Agent.
+- Security-Mechanik ergänzt:
+  - Self-Approval blockiert.
+  - Tenant-Isolation in allen Approval-/Audit-Queries.
+  - RBAC-Permissions getrennt nach Änderungsantrag (`plugins.manage`/`rbac.manage`) und Freigabe (`approvals.manage`).
