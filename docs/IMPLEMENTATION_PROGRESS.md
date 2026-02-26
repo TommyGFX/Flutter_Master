@@ -558,3 +558,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
   - Matrix-Ausführung über GitHub Environments als Zielbetrieb beschrieben.
 
 **Abnahme-Status Schritt 34:** Die technische Verdrahtung für umgebungsbezogene Produktiv-Validatoren ist abgeschlossen. Die finale fachliche Abnahme gegen reale Referenzinstanzen erfolgt nach Befüllung der Environment-Secrets (`dev/staging/prod`) im Ziel-Repository.
+
+## Schritt 35 – Flutter-Frontend auf `flutter_riverpod` 3.2.1 umgestellt (abgeschlossen)
+- Flutter-Dependency in `flutter_app/pubspec.yaml` von `flutter_riverpod` `2.6.3` auf `3.2.1` aktualisiert.
+- Projektdokumentation in `README.md` auf die neue Riverpod-Version angehoben.
+- Verifikation im `flutter_app` gestartet (`flutter pub get`/`flutter test`), jedoch im Container durch fehlendes Flutter-SDK blockiert (`flutter: command not found`).
+
+**Abnahme-Status Schritt 35:** Das Flutter-Frontend nutzt projektweit `flutter_riverpod` `3.2.1`; Die Quellbasis und Doku sind auf `3.2.1` migriert; die finale Laufzeitverifikation ist nachgelagert in einer Flutter-fähigen Umgebung auszuführen.
+
+## Schritt 36 – Riverpod-3 API-Fixes im Billing-Flow (abgeschlossen)
+- Diagnosefehler im `billing_flow_controller.dart` nach Riverpod-Upgrade bereinigt.
+- Provider-Definition von `AutoDisposeNotifierProvider<...>(...)` auf Riverpod-3-konformes `NotifierProvider.autoDispose<...>(...)` umgestellt.
+- Controller-Vererbung von `AutoDisposeNotifier<BillingFlowState>` auf `Notifier<BillingFlowState>` angepasst, sodass `build`, `ref` und `state` wieder korrekt aufgelöst werden.
+- Ziel: Behebung der gemeldeten Analyzer-Fehler (`undefined_function`, `extends_non_class`, Folgefehler auf `state`/`ref`).
+
+**Abnahme-Status Schritt 36:** Die gemeldeten Riverpod-Migrationsfehler im Billing-Flow-Codepfad sind auf Quelltextebene korrigiert; finale Verifikation erfolgt in Flutter-fähiger Umgebung.

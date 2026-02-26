@@ -10,7 +10,7 @@ final billingFlowRepositoryProvider = Provider<BillingFlowRepository>((ref) {
 });
 
 final billingFlowControllerProvider =
-    AutoDisposeNotifierProvider<BillingFlowController, BillingFlowState>(
+    NotifierProvider.autoDispose<BillingFlowController, BillingFlowState>(
   BillingFlowController.new,
 );
 
@@ -60,7 +60,7 @@ class BillingFlowState {
   }
 }
 
-class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
+class BillingFlowController extends Notifier<BillingFlowState> {
   static const _flowCurrencyCode = 'USD';
   static const _flowExchangeRate = 1.08;
 
