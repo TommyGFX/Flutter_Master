@@ -31,13 +31,6 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 **Abnahme Phase 0:** Plugins können sauber registriert, aktiviert und in UI/API sichtbar gemacht werden. ✅ **Abgeschlossen**
 
 
-### Fortschritt (Phase 0 – Abnahmeabsicherung)
-- [x] Plugin-Contract-Metadaten und Lifecycle-Hooks sind über Contract-Tests abgesichert (`backend/tests/Contract/plugin_contract_test.php`).
-- [x] Navigations-Contract für plugin-/RBAC-basierte Sichtbarkeit ist als dedizierter Contract implementiert und getestet (`PluginNavigationContract`).
-- [x] Flutter-Routing besitzt Widget-/Router-Tests, damit unbekannte Routen zuverlässig auf Login zurückfallen.
-- [x] Phase-0-Abnahmekriterium „UI/API sichtbar“ ist testbar dokumentiert (Backend-Contract + Flutter-Widget-Test).
-
----
 
 ## Phase 1 – Core: Rechnungen & Dokumente (MVP)
 ### Plugin: `billing_core`
@@ -75,12 +68,6 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 
 **Abnahme Phase 1:** End-to-End Flow von Angebot bis bezahlter Rechnung inkl. PDF und Historie.
 
-### Fortschritt (Phase 1 – Billing-Flow produktiv härten)
-- [x] Error-Handling im Flutter-Billing-Flow um kontextbezogene API-Fehlermeldungen (inkl. HTTP-Status/Backend-Message) erweitert.
-- [x] UX-Polish umgesetzt (Status-Banner, Timeline mit Erfolgs-/Fehlerindikatoren, Empty-State).
-- [x] Golden-Test für Billing-Flow-Screen ergänzt (`billing_flow_screen_golden_test.dart`).
-
----
 
 ## Phase 2 – Payments & Mahnwesen (MVP+)
 ### Plugin: `billing_payments`
@@ -264,8 +251,8 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 ## Fortschrittsdokumentation (aktuell)
 | Phase | Fokus | Status | Nächster konkreter Schritt |
 |---|---|---|---|
-| 0 | Plugin-Fundament | **Abgeschlossen** | Phase 1 UI/E2E-Qualität weiter ausbauen (Golden-/Widget-Tests) |
-| 1 | Rechnungen & Dokumente | In Umsetzung (MVP-Backend + Flutter E2E-UI umgesetzt) | Billing-Flow produktiv härten (Error-Handling, Golden-Tests, UX-Polish) |
+| 0 | Plugin-Fundament | **Abgeschlossen** | Kein offener Backlog-Eintrag (erledigte Punkte aus der Aktionsliste entfernt) |
+| 1 | Rechnungen & Dokumente | In Umsetzung (MVP-Backend + Flutter E2E-UI umgesetzt) | Phase-1-Abnahme schließen: Nummernkreis/Mehrwährung/PDF-Export im E2E-Flow durchtesten |
 | 2 | Payments & Mahnwesen | Geplant | Payment-Provider-Abstraktion definieren |
 | 3 | Tax & Compliance | In Umsetzung (Backend-Basis implementiert) | Preflight-Regeln pro Dokumenttyp fachlich schärfen + XRechnung/ZUGFeRD-Validator ergänzen |
 | 4 | Abos | In Umsetzung (Backend-MVP implementiert) | Provider-Adapter + Flutter Abo-Management-UI ergänzen |
@@ -308,23 +295,14 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 ---
 
 ## Fortschrittsprotokoll (aktueller Stand)
+### Backlog-Bereinigung (aktuelle Revision)
+- Erledigte Aktionslisten für **Phase 0** (Abnahmeabsicherung) und **Phase 1** (Billing-Flow-Härtung) wurden aus dem offenen Roadmap-Backlog entfernt.
+- Fokus der offenen Liste liegt damit auf den nächsten fachlichen Abnahmeschritten statt auf bereits abgeschlossenen Qualitätsmaßnahmen.
+
 ### Phase 0 – Plugin-Fundament
 - **Status:** ✅ abgeschlossen
-- **Schritt 0.1 Plugin-SDK:** ✅ umgesetzt (Contract + Contract-Tests vorhanden)
-- **Schritt 0.2 Domain-Event-Bus + Outbox:** 🔄 robust gemacht
-  - Retry-Strategie auf exponentielles Backoff mit Obergrenze erweitert.
-  - Outbox-Worker um `processing`-Status und Reclaim für hängende Jobs ergänzt.
-  - Max-Retry-Schutz eingebaut (`failed` nach Erreichen des Limits).
-  - Monitoring über dedizierte Metriken/API (`/api/admin/outbox/metrics`) ergänzt.
-- **Schritt 0.3 Shared UI Shell:** 🔄 vertieft
-  - Backend liefert neben Plugin-Shell-Daten jetzt ein dediziertes `navigation`-Payload für RBAC-konforme **und aktivierte** Plugins.
-  - Flutter Admin-Dashboard zeigt eine einheitliche, dynamische Plugin-Navigation im Sidepanel (inkl. Auswahl-Highlight im Plugin-Shell-Bereich).
-  - Sichtbarkeit in der Navigation basiert auf `enabled`-Lifecycle + `is_active` und bereits gefilterten Tenant-Berechtigungen.
-- **Abschlussnotiz:** Phase-0-Abnahmekriterien (Plugin-Contracts + Navigation/UI-Sichtbarkeit) sind erfüllt und dokumentiert.
+- **Dokumentationsstand:** Detailpunkte sind erledigt und wurden aus der offenen Aktionsliste entfernt.
 
 ### Phase 1 – Flutter Billing UI + E2E-Flow (Angebot -> bezahlt)
 - **Status:** 🔄 vervollständigt (UI + automatisierter Ablauf implementiert)
-- Im Flutter Admin-Dashboard wurde ein dedizierter Bereich **"Billing E2E (Phase 1)"** ergänzt.
-- Der Flow orchestriert jetzt API-seitig: Kunde sicherstellen -> Angebot anlegen/finalisieren -> in Rechnung konvertieren -> Rechnung finalisieren -> Zahlungslink erzeugen -> Zahlung verbuchen -> Historie + PDF prüfen.
-- Ergebniswerte (Angebot/Rechnung/Status/Historie/PDF) und eine Schritt-für-Schritt-Timeline werden direkt in der UI angezeigt.
-- Ein automatisierter Flutter-Test validiert den Controller-Flow \`Angebot -> bezahlt\` über ein Repository-Double.
+- **Dokumentationsstand:** Die abgeschlossenen Härtungsmaßnahmen wurden aus der offenen Liste entfernt; als nächster Schritt bleibt die fachliche Phase-1-Abnahme.
