@@ -13,6 +13,8 @@ use App\Controllers\UploadController;
 use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
+use App\Services\ApprovalService;
+use App\Services\AuditLogService;
 use App\Services\RbacService;
 use App\Services\StripeService;
 use App\Services\TemplateRendererService;
@@ -37,7 +39,7 @@ final class App
         $upload = new UploadController();
         $stripe = new StripeController(new StripeService());
         $document = new DocumentController(new PdfRendererService(), new TenantMailerService(), new TemplateRendererService());
-        $adminPlugins = new AdminPluginController(new RbacService());
+        $adminPlugins = new AdminPluginController(new RbacService(), new ApprovalService(), new AuditLogService());
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -65,6 +67,9 @@ final class App
         $router->add('POST', '/api/admin/plugins/{plugin}/status', [$adminPlugins, 'setStatus']);
         $router->add('GET', '/api/admin/roles/permissions', [$adminPlugins, 'listRolePermissions']);
         $router->add('PUT', '/api/admin/roles/{roleKey}/permissions', [$adminPlugins, 'updateRolePermissions']);
+        $router->add('GET', '/api/admin/approvals', [$adminPlugins, 'listApprovals']);
+        $router->add('POST', '/api/admin/approvals/{approvalId}/approve', [$adminPlugins, 'approve']);
+        $router->add('POST', '/api/admin/approvals/{approvalId}/reject', [$adminPlugins, 'reject']);
 
         $router->dispatch($request);
     }
@@ -83,7 +88,7 @@ final class App
             header('Vary: Origin');
         }
 
-        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-Id, Stripe-Signature');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-Id, X-User-Id, X-Permissions, X-Approval-Status, Stripe-Signature');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Credentials: true');
     }

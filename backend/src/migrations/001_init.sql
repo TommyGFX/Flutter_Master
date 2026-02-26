@@ -190,3 +190,36 @@ CREATE TABLE IF NOT EXISTS stripe_dunning_cases (
     INDEX idx_dunning_status (tenant_id, dunning_status),
     CONSTRAINT fk_dunning_event FOREIGN KEY (stripe_event_pk) REFERENCES stripe_webhook_events (id)
 );
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    actor_id VARCHAR(128) NOT NULL,
+    action_key VARCHAR(128) NOT NULL,
+    target_type VARCHAR(64) NOT NULL,
+    target_id VARCHAR(128) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    metadata_json JSON NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(512) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_tenant_created (tenant_id, created_at),
+    INDEX idx_audit_actor (tenant_id, actor_id)
+);
+
+CREATE TABLE IF NOT EXISTS approval_requests (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    request_type VARCHAR(64) NOT NULL,
+    target_type VARCHAR(64) NOT NULL,
+    target_id VARCHAR(128) NOT NULL,
+    change_payload_json JSON NOT NULL,
+    requested_by VARCHAR(128) NOT NULL,
+    approved_by VARCHAR(128) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    reason VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    decided_at TIMESTAMP NULL,
+    INDEX idx_approval_tenant_status (tenant_id, status, created_at),
+    INDEX idx_approval_target (tenant_id, target_type, target_id)
+);
