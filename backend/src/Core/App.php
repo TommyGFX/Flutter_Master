@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Controllers\AuthController;
+use App\Controllers\AdminPluginController;
 use App\Controllers\CrudController;
 use App\Controllers\DocumentController;
 use App\Controllers\StripeController;
@@ -12,6 +13,7 @@ use App\Controllers\UploadController;
 use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
+use App\Services\RbacService;
 use App\Services\StripeService;
 use App\Services\TemplateRendererService;
 use App\Services\TenantMailerService;
@@ -28,6 +30,7 @@ final class App
         $upload = new UploadController();
         $stripe = new StripeController(new StripeService());
         $document = new DocumentController(new PdfRendererService(), new TenantMailerService(), new TemplateRendererService());
+        $adminPlugins = new AdminPluginController(new RbacService());
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -50,6 +53,11 @@ final class App
 
         $router->add('POST', '/api/pdf/render', [$document, 'renderPdf']);
         $router->add('POST', '/api/email/send', [$document, 'sendEmail']);
+
+        $router->add('GET', '/api/admin/plugins', [$adminPlugins, 'index']);
+        $router->add('POST', '/api/admin/plugins/{plugin}/status', [$adminPlugins, 'setStatus']);
+        $router->add('GET', '/api/admin/roles/permissions', [$adminPlugins, 'listRolePermissions']);
+        $router->add('PUT', '/api/admin/roles/{roleKey}/permissions', [$adminPlugins, 'updateRolePermissions']);
 
         $router->dispatch($request);
     }

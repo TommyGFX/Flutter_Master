@@ -77,3 +77,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Multi-Tenant SMTP Versand über `TenantMailerService` (Symfony Mailer) mit tenant-spezifischer Konfiguration aus `tenant_smtp_settings` umgesetzt.
 - Fallback auf `.env` SMTP-Konfiguration implementiert, falls keine Tenant-Konfiguration vorhanden ist.
 - Migration für `tenant_smtp_settings` ergänzt.
+
+## Schritt 8 – Plugin-Lifecycle UI + Rechteverwaltung (abgeschlossen)
+- Backend-Endpunkte für tenant-spezifische Plugin-Lifecycle-Operationen ergänzt:
+  - `GET /api/admin/plugins`
+  - `POST /api/admin/plugins/{plugin}/status`
+- Backend-Endpunkte für tenant-spezifische Role-Permissions ergänzt:
+  - `GET /api/admin/roles/permissions`
+  - `PUT /api/admin/roles/{roleKey}/permissions`
+- RBAC-Prüfung für Admin-Operationen über Berechtigungen `plugins.manage` und `rbac.manage` eingebunden.
+- Neue Migrationstabelle `tenant_plugins` für Lifecycle-State pro Tenant ergänzt.
+- Admin-Dashboard in Flutter auf modulare Admin-Navigation mit folgenden Bereichen erweitert:
+  - Übersicht mit Tenant-/Permission-Kontext
+  - Plugin Lifecycle Verwaltung (Aktivieren/Deaktivieren)
+  - Rechteverwaltung (Role → kommagetrennte Permission-Liste)
+- Auth-State erweitert, damit `tenant_id` und `permissions` aus dem Login-Response tenant-sicher im Frontend genutzt werden.

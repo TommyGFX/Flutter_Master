@@ -110,6 +110,8 @@ final class AuthController
 
         return [
             'token' => $accessToken,
+            'tenant_id' => $claims['tenant_id'] ?? null,
+            'permissions' => $claims['permissions'] ?? [],
             ...$refreshToken,
         ];
     }

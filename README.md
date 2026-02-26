@@ -32,6 +32,8 @@ Senior-Level Starter für eine **Flutter Web/Android/iOS App** mit **PHP 8.5 Bac
 - Login UI mit 4 Modi (Company/Mitarbeiter/Portal/Superadmin).
 - Modernes SaaS-Grundlayout mit Sidebar + Topbar.
 - CRUD-Basis-UI gegen Backend API.
+- Admin-Bereich mit Plugin-Lifecycle UI (tenant-spezifisches Aktivieren/Deaktivieren).
+- Admin-Rechteverwaltung für Role-Permissions im Tenant-Kontext.
 
 ## Projekt starten
 
@@ -57,4 +59,4 @@ Dies ist ein robuster **Starter** mit sauberer Architektur und Kern-Skeletten f�
 Für produktiven Einsatz sollten als nächste Schritte u. a. implementiert werden:
 - echtes JWT/Refresh Token Handling mit Rotationen,
 - Domain-spezifische Stripe Webhook-Persistenz (Provisionierung, Rechnungslauf, Dunning),
-- vollständiges RBAC + Plugin Lifecycle UI.
+- persistente Audit-Logs und Approval-Flow für kritische RBAC-/Plugin-Änderungen.

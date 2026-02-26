@@ -47,6 +47,16 @@ CREATE TABLE IF NOT EXISTS plugin_hooks (
     config_json JSON NULL
 );
 
+CREATE TABLE IF NOT EXISTS tenant_plugins (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    plugin_key VARCHAR(128) NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenant_plugin (tenant_id, plugin_key)
+);
+
 CREATE TABLE IF NOT EXISTS email_templates (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL,
