@@ -91,6 +91,34 @@ final class FinanceReportingController
         }
     }
 
+    public function exportStream(Request $request): void
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === null) {
+            return;
+        }
+
+        $payload = $request->json();
+        $type = is_string($payload['type'] ?? null) ? $payload['type'] : '';
+        $format = is_string($payload['format'] ?? null) ? $payload['format'] : 'csv';
+        $fromDate = is_string($payload['from'] ?? null) ? $payload['from'] : null;
+        $toDate = is_string($payload['to'] ?? null) ? $payload['to'] : null;
+
+        try {
+            $stream = $this->reporting->buildExportStream($tenantId, $type, $format, $fromDate, $toDate);
+            Response::streamDownload(
+                (string) ($stream['filename'] ?? 'finance_export.csv'),
+                (string) ($stream['content_type'] ?? 'text/csv; charset=utf-8'),
+                is_callable($stream['stream_writer'] ?? null)
+                    ? $stream['stream_writer']
+                    : static function (): void {
+                    }
+            );
+        } catch (RuntimeException $exception) {
+            Response::json(['error' => $exception->getMessage()], 422);
+        }
+    }
+
     public function listConnectors(Request $request): void
     {
         $tenantId = $this->tenantId($request);
@@ -129,6 +157,23 @@ final class FinanceReportingController
         } catch (RuntimeException $exception) {
             $statusCode = $exception->getMessage() === 'connector_not_enabled' ? 404 : 422;
             Response::json(['error' => $exception->getMessage()], $statusCode);
+        }
+    }
+
+    public function syncConnectors(Request $request): void
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === null) {
+            return;
+        }
+
+        $payload = $request->json();
+        $limit = isset($payload['limit']) ? (int) $payload['limit'] : 25;
+
+        try {
+            Response::json(['data' => $this->reporting->syncConnectors($tenantId, $limit)]);
+        } catch (RuntimeException $exception) {
+            Response::json(['error' => $exception->getMessage()], 422);
         }
     }
 

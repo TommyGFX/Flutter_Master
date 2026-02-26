@@ -252,7 +252,7 @@ _Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter
 | 3 | Tax & Compliance | In Umsetzung (CI-Gate um umgebungsbezogene Produktiv-Validator-Endpoints/Secrets inkl. Auth erweitert; GitHub-Environments dev/staging/prod verdrahtet) | Nächster Schritt: Secrets je Umgebung in GitHub Environments befüllen und gegen reale Referenzinstanzen abnehmen (Abnahmeprotokoll erfassen) |
 | 4 | Abos | In Umsetzung (Provider-Adapter + Flutter Abo-Management-UI ergänzt; Provider-Webhooks + Completion-Callbacks produktiv verdrahtet und regressionsgesichert) | Nächster Schritt: Reale PSP-Sandbox-Abnahme mit tenant-spezifischen Secrets/Endpoints durchführen und Abnahmeprotokoll dokumentieren |
 | 5 | E-Mail & Versand | In Umsetzung (Delivery-Worker inkl. Retry/Provider-Dispatch und Flutter-Portal-UI-Flow ergänzt) | Nächster Schritt: Reale SMTP/SendGrid/Mailgun-Sandbox-Abnahme inkl. Tracking-Ereignis-Validierung dokumentieren |
-| 6 | Reporting | In Umsetzung (Backend-MVP implementiert) | Connector-Synchronisation + DATEV/Excel-Datei-Streaming produktiv härten |
+| 6 | Reporting | In Umsetzung (Backend-MVP + Härtung Connector-Sync/Export-Streaming) | Nächster Schritt: Connector-Delivery gegen reale Lexoffice/SevDesk/FastBill-Sandboxes mit tenant-spezifischen Secrets und Monitoring abnehmen |
 | 7 | Team & Rechte | Teilweise vorhanden | Rollen auf Plugin-Capabilities mappen |
 | 8 | Integrationen | In Umsetzung (Backend-MVP implementiert) | Adapter-Worker + Flutter-Import-Wizard-UI vervollständigen |
 | 9 | Katalog/Preise | In Umsetzung (Backend-MVP implementiert) | Flutter-Katalog-UI + Angebotseditor-Integration der Preislogik |
@@ -263,6 +263,8 @@ _Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter
 - `finance_reporting` Plugin-Endpunkte für KPI-Dashboard, OP-Liste und Steuerreport umgesetzt.
 - Export-Endpunkt für DATEV-, OP- und Steuerdaten (CSV/Excel-Formatkennung) ergänzt.
 - Connector-Verwaltung für Lexoffice/SevDesk/FastBill inkl. Webhook-Queue-Logging implementiert.
+- **Neu (Härtung):** Datei-Streaming-Endpunkt für DATEV/OP/Steuer-Exporte (`csv`/`excel` als TSV) mit Download-Headern und speicherschonender Writer-Pipeline ergänzt.
+- **Neu (Härtung):** Connector-Synchronisationslauf (`queued` -> `delivered|failed`) inkl. Signatur-Headern, Timeout und Statuspersistenz eingeführt.
 
 
 ### Phase 8 – Implementierungsstand (Backend-MVP)

@@ -196,9 +196,11 @@ final class App
         $router->add('GET', '/api/billing/finance/op-list', [$financeReporting, 'openItems']);
         $router->add('GET', '/api/billing/finance/tax-report', [$financeReporting, 'taxReport']);
         $router->add('POST', '/api/billing/finance/exports', [$financeReporting, 'export']);
+        $router->add('POST', '/api/billing/finance/exports/stream', [$financeReporting, 'exportStream']);
         $router->add('GET', '/api/billing/finance/connectors', [$financeReporting, 'listConnectors']);
         $router->add('PUT', '/api/billing/finance/connectors', [$financeReporting, 'upsertConnector']);
         $router->add('POST', '/api/billing/finance/connectors/{provider}/webhook', [$financeReporting, 'publishWebhook']);
+        $router->add('POST', '/api/billing/finance/connectors/sync', [$financeReporting, 'syncConnectors']);
 
 
         $router->add('GET', '/api/org/companies', [$orgManagement, 'listCompanies']);

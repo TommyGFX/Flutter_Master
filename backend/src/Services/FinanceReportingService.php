@@ -9,6 +9,8 @@ use RuntimeException;
 
 final class FinanceReportingService
 {
+    private const CONNECTOR_PROVIDERS = ['lexoffice', 'sevdesk', 'fastbill'];
+
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -181,7 +183,25 @@ final class FinanceReportingService
             'type' => $normalizedType,
             'format' => $normalizedFormat,
             'generated_at' => gmdate(DATE_ATOM),
+            'filename' => $this->exportFilename($normalizedType, $normalizedFormat),
             'payload' => $payload,
+        ];
+    }
+
+    public function buildExportStream(string $tenantId, string $type, string $format, ?string $fromDate, ?string $toDate): array
+    {
+        $export = $this->export($tenantId, $type, $format, $fromDate, $toDate);
+        $normalizedType = (string) ($export['type'] ?? 'datev');
+        $normalizedFormat = (string) ($export['format'] ?? 'csv');
+        $payload = is_array($export['payload'] ?? null) ? $export['payload'] : [];
+        $rows = $this->flattenExportRows($normalizedType, $payload);
+
+        return [
+            'filename' => $this->exportFilename($normalizedType, $normalizedFormat),
+            'content_type' => $this->exportContentType($normalizedFormat),
+            'stream_writer' => function () use ($rows, $normalizedFormat): void {
+                $this->writeTabularStream($rows, $normalizedFormat);
+            },
         ];
     }
 
@@ -219,7 +239,7 @@ final class FinanceReportingService
     public function upsertConnector(string $tenantId, array $payload): array
     {
         $provider = strtolower(trim((string) ($payload['provider'] ?? '')));
-        if (!in_array($provider, ['lexoffice', 'sevdesk', 'fastbill'], true)) {
+        if (!in_array($provider, self::CONNECTOR_PROVIDERS, true)) {
             throw new RuntimeException('invalid_connector_provider');
         }
 
@@ -257,7 +277,7 @@ final class FinanceReportingService
     public function publishWebhook(string $tenantId, string $provider, array $payload): array
     {
         $provider = strtolower(trim($provider));
-        if (!in_array($provider, ['lexoffice', 'sevdesk', 'fastbill'], true)) {
+        if (!in_array($provider, self::CONNECTOR_PROVIDERS, true)) {
             throw new RuntimeException('invalid_connector_provider');
         }
 
@@ -285,6 +305,64 @@ final class FinanceReportingService
         ];
     }
 
+    public function syncConnectors(string $tenantId, int $limit = 25): array
+    {
+        $effectiveLimit = min(100, max(1, $limit));
+        $stmt = $this->pdo->prepare(
+            'SELECT id, provider, webhook_url, payload_json
+             FROM finance_reporting_webhook_logs
+             WHERE tenant_id = :tenant_id
+               AND delivery_status = :delivery_status
+             ORDER BY created_at ASC, id ASC
+             LIMIT ' . $effectiveLimit
+        );
+        $stmt->execute(['tenant_id' => $tenantId, 'delivery_status' => 'queued']);
+        $rows = $stmt->fetchAll() ?: [];
+
+        $processed = 0;
+        $delivered = 0;
+        $failed = 0;
+        $results = [];
+
+        foreach ($rows as $row) {
+            $processed++;
+            $id = (int) ($row['id'] ?? 0);
+            $provider = (string) ($row['provider'] ?? '');
+            $webhookUrl = $this->nullableString($row['webhook_url'] ?? null);
+            $payload = json_decode((string) ($row['payload_json'] ?? '{}'), true);
+
+            if ($webhookUrl === null) {
+                $this->updateWebhookLogStatus($tenantId, $id, 'failed');
+                $failed++;
+                $results[] = ['id' => $id, 'provider' => $provider, 'status' => 'failed', 'reason' => 'missing_webhook_url'];
+                continue;
+            }
+
+            $delivery = $this->deliverWebhook($tenantId, $provider, $webhookUrl, is_array($payload) ? $payload : []);
+            $status = ($delivery['delivered'] ?? false) === true ? 'delivered' : 'failed';
+            $this->updateWebhookLogStatus($tenantId, $id, $status);
+            if ($status === 'delivered') {
+                $delivered++;
+            } else {
+                $failed++;
+            }
+
+            $results[] = [
+                'id' => $id,
+                'provider' => $provider,
+                'status' => $status,
+                'http_status' => $delivery['http_status'] ?? null,
+            ];
+        }
+
+        return [
+            'processed' => $processed,
+            'delivered' => $delivered,
+            'failed' => $failed,
+            'results' => $results,
+        ];
+    }
+
     private function connectorConfig(string $tenantId, string $provider): ?array
     {
         $stmt = $this->pdo->prepare(
@@ -305,6 +383,123 @@ final class FinanceReportingService
             'webhook_url' => $row['webhook_url'] ?? null,
             'is_enabled' => (bool) ($row['is_enabled'] ?? false),
         ];
+    }
+
+    private function updateWebhookLogStatus(string $tenantId, int $id, string $status): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE finance_reporting_webhook_logs
+             SET delivery_status = :delivery_status
+             WHERE tenant_id = :tenant_id AND id = :id'
+        );
+        $stmt->execute([
+            'delivery_status' => $status,
+            'tenant_id' => $tenantId,
+            'id' => $id,
+        ]);
+    }
+
+    private function deliverWebhook(string $tenantId, string $provider, string $webhookUrl, array $payload): array
+    {
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+        $secret = (string) (getenv('FINANCE_REPORTING_CONNECTOR_WEBHOOK_SECRET') ?: '');
+        $signature = hash_hmac('sha256', $body, $secret !== '' ? $secret : $tenantId . ':' . $provider);
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'timeout' => 8,
+                'ignore_errors' => true,
+                'header' => implode("\r\n", [
+                    'Content-Type: application/json',
+                    'X-Finance-Tenant: ' . $tenantId,
+                    'X-Finance-Provider: ' . $provider,
+                    'X-Finance-Signature: ' . $signature,
+                ]),
+                'content' => $body,
+            ],
+        ]);
+
+        $result = @file_get_contents($webhookUrl, false, $context);
+        $httpStatus = $this->extractHttpStatus($http_response_header ?? []);
+
+        return [
+            'delivered' => $result !== false && $httpStatus >= 200 && $httpStatus < 300,
+            'http_status' => $httpStatus,
+        ];
+    }
+
+    private function extractHttpStatus(array $headers): int
+    {
+        foreach ($headers as $header) {
+            if (!is_string($header)) {
+                continue;
+            }
+
+            if (preg_match('/^HTTP\/\S+\s+(\d{3})/', $header, $matches) === 1) {
+                return (int) $matches[1];
+            }
+        }
+
+        return 0;
+    }
+
+    private function flattenExportRows(string $type, array $payload): array
+    {
+        if ($type === 'datev') {
+            return is_array($payload['rows'] ?? null) ? $payload['rows'] : [];
+        }
+
+        if ($type === 'op') {
+            return is_array($payload['items'] ?? null) ? $payload['items'] : [];
+        }
+
+        if ($type === 'tax') {
+            return is_array($payload['lines'] ?? null) ? $payload['lines'] : [];
+        }
+
+        return [];
+    }
+
+    private function writeTabularStream(array $rows, string $format): void
+    {
+        $out = fopen('php://output', 'wb');
+        if ($out === false) {
+            throw new RuntimeException('export_stream_unavailable');
+        }
+
+        if ($rows === []) {
+            fclose($out);
+            return;
+        }
+
+        $delimiter = $format === 'excel' ? "\t" : ';';
+        $header = array_keys((array) $rows[0]);
+        fputcsv($out, $header, $delimiter);
+
+        foreach ($rows as $row) {
+            $line = [];
+            foreach ($header as $key) {
+                $value = is_array($row) ? ($row[$key] ?? null) : null;
+                $line[] = is_scalar($value) || $value === null ? (string) ($value ?? '') : json_encode($value, JSON_THROW_ON_ERROR);
+            }
+            fputcsv($out, $line, $delimiter);
+        }
+
+        fclose($out);
+    }
+
+    private function exportFilename(string $type, string $format): string
+    {
+        $extension = $format === 'excel' ? 'tsv' : 'csv';
+        return sprintf('finance_%s_%s.%s', $type, date('Ymd_His'), $extension);
+    }
+
+    private function exportContentType(string $format): string
+    {
+        return $format === 'excel'
+            ? 'text/tab-separated-values; charset=utf-8'
+            : 'text/csv; charset=utf-8';
     }
 
     private function buildDatevRows(string $tenantId, ?string $fromDate, ?string $toDate): array
