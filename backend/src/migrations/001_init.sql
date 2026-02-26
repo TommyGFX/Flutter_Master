@@ -704,3 +704,54 @@ CREATE TABLE IF NOT EXISTS subscription_payment_method_updates (
     INDEX idx_subscription_payment_update_contract (tenant_id, contract_id, status),
     CONSTRAINT fk_subscription_payment_update_contract FOREIGN KEY (contract_id) REFERENCES subscription_contracts (id)
 );
+
+CREATE TABLE IF NOT EXISTS document_delivery_templates (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    template_key VARCHAR(128) NOT NULL,
+    channel VARCHAR(32) NOT NULL DEFAULT 'email',
+    locale VARCHAR(12) NOT NULL DEFAULT 'de',
+    subject VARCHAR(255) NOT NULL,
+    body_html MEDIUMTEXT NOT NULL,
+    body_text MEDIUMTEXT NULL,
+    variables_json JSON NULL,
+    attachments_json JSON NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_document_delivery_template (tenant_id, template_key, channel, locale),
+    INDEX idx_document_delivery_template_channel (tenant_id, channel, locale)
+);
+
+CREATE TABLE IF NOT EXISTS document_delivery_provider_configs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    provider VARCHAR(32) NOT NULL DEFAULT 'smtp',
+    from_email VARCHAR(255) NULL,
+    from_name VARCHAR(255) NULL,
+    reply_to VARCHAR(255) NULL,
+    smtp_host VARCHAR(255) NULL,
+    smtp_port INT NOT NULL DEFAULT 587,
+    smtp_username VARCHAR(255) NULL,
+    smtp_password VARCHAR(255) NULL,
+    smtp_encryption VARCHAR(16) NOT NULL DEFAULT 'tls',
+    sendgrid_api_key VARCHAR(255) NULL,
+    mailgun_domain VARCHAR(255) NULL,
+    mailgun_api_key VARCHAR(255) NULL,
+    webhook_signing_secret VARCHAR(255) NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_document_delivery_provider_tenant (tenant_id)
+);
+
+CREATE TABLE IF NOT EXISTS document_delivery_tracking_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    event_type VARCHAR(32) NOT NULL,
+    message_id VARCHAR(191) NULL,
+    template_key VARCHAR(128) NULL,
+    recipient VARCHAR(255) NULL,
+    document_id BIGINT UNSIGNED NULL,
+    metadata_json JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_document_delivery_tracking_event (tenant_id, event_type, created_at),
+    INDEX idx_document_delivery_tracking_document (tenant_id, document_id),
+    CONSTRAINT fk_document_delivery_tracking_document FOREIGN KEY (document_id) REFERENCES billing_documents (id)
+);
