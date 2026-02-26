@@ -291,3 +291,17 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 - Backup/Restore-Basis implementiert (Sicherungs- und Restore-Jobs mit Status, Prüfsumme und Storage-Key-Metadaten).
 - Revisionssichere Ablage als versionierte Archiv-Records mit Integritätshash und Aufbewahrungsdatum bereitgestellt.
 - Reliability-Baseline ergänzt: konfigurierbare Richtlinien für Rate-Limits, Monitoring, Alerting und Status-Page pro Tenant.
+
+
+---
+
+## Fortschrittsprotokoll (aktueller Stand)
+### Phase 0 – Plugin-Fundament
+- **Status:** In Umsetzung
+- **Schritt 0.1 Plugin-SDK:** ✅ umgesetzt (Contract + Contract-Tests vorhanden)
+- **Schritt 0.2 Domain-Event-Bus + Outbox:** 🔄 robust gemacht
+  - Retry-Strategie auf exponentielles Backoff mit Obergrenze erweitert.
+  - Outbox-Worker um `processing`-Status und Reclaim für hängende Jobs ergänzt.
+  - Max-Retry-Schutz eingebaut (`failed` nach Erreichen des Limits).
+  - Monitoring über dedizierte Metriken/API (`/api/admin/outbox/metrics`) ergänzt.
+- **Nächster Fokus:** Schritt 0.3 Shared UI Shell weiter vertiefen.

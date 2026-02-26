@@ -112,6 +112,7 @@ final class App
         $router->add('PUT', '/api/admin/feature-flags/{flagKey}', [$pluginFoundation, 'setFeatureFlag']);
         $router->add('POST', '/api/admin/domain-events', [$pluginFoundation, 'publishDomainEvent']);
         $router->add('POST', '/api/admin/outbox/process', [$pluginFoundation, 'processOutbox']);
+        $router->add('GET', '/api/admin/outbox/metrics', [$pluginFoundation, 'outboxMetrics']);
 
         $router->add('POST', '/api/platform/impersonate/company', [$platformAdmin, 'impersonateCompany']);
         $router->add('GET', '/api/platform/admin-stats', [$platformAdmin, 'adminStats']);

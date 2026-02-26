@@ -151,6 +151,18 @@ final class PluginFoundationController
         Response::json(['tenant_id' => $tenantId, 'result' => $result]);
     }
 
+
+    public function outboxMetrics(Request $request): void
+    {
+        $tenantId = $this->resolveTenant($request);
+        if ($tenantId === null || !$this->authorize($request, 'plugins.manage')) {
+            return;
+        }
+
+        $service = new DomainEventService(Database::connection());
+        Response::json(['tenant_id' => $tenantId, 'metrics' => $service->outboxMetrics()]);
+    }
+
     public function updateLifecycle(Request $request, string $pluginKey): void
     {
         $tenantId = $this->resolveTenant($request);

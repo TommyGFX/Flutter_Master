@@ -164,6 +164,9 @@ Neue Fundament-Endpunkte für standardisierte Plugin-Metadaten, Feature-Flags un
   - Persistiert Domain-Events (`invoice.created`, `invoice.finalized`, `payment.received`) und erzeugt Outbox-Message.
 - `POST /api/admin/outbox/process`
   - Verarbeitet ausstehende Outbox-Messages in Batches (`{"limit": 50}` optional).
+  - Worker nutzt `processing`-Locking, exponentielles Retry-Backoff (bis max. 5 Versuche) und markiert danach als `failed`.
+- `GET /api/admin/outbox/metrics`
+  - Liefert Monitoring-Metriken (`status`-Zähler, `oldest_pending_at`, Retry-/Timeout-Konfiguration).
 
 ### Persistenz
 - `approval_requests`: Anfrage, Payload, Requester/Approver, Status (`pending|approved|rejected`)
