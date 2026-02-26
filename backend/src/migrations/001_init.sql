@@ -142,7 +142,16 @@ CREATE TABLE IF NOT EXISTS email_queue (
     template_key VARCHAR(128) NOT NULL,
     context_json JSON NULL,
     status VARCHAR(32) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    retry_count INT NOT NULL DEFAULT 0,
+    next_retry_at TIMESTAMP NULL,
+    processed_at TIMESTAMP NULL,
+    last_error VARCHAR(512) NULL,
+    provider VARCHAR(32) NULL,
+    message_id VARCHAR(128) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_email_queue_worker (tenant_id, status, next_retry_at, created_at),
+    INDEX idx_email_queue_message_id (tenant_id, message_id)
 );
 
 CREATE TABLE IF NOT EXISTS crm_items (

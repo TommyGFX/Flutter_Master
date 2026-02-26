@@ -9,6 +9,8 @@ use RuntimeException;
 
 final class DocumentDeliveryService
 {
+    private const MAX_RETRY_COUNT = 5;
+
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -153,10 +155,12 @@ final class DocumentDeliveryService
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO document_delivery_provider_configs (
-                tenant_id, provider, from_email, from_name, reply_to, smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption,
+                tenant_id, provider, from_email, from_name, reply_to,
+                smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption,
                 sendgrid_api_key, mailgun_domain, mailgun_api_key, webhook_signing_secret
             ) VALUES (
-                :tenant_id, :provider, :from_email, :from_name, :reply_to, :smtp_host, :smtp_port, :smtp_username, :smtp_password, :smtp_encryption,
+                :tenant_id, :provider, :from_email, :from_name, :reply_to,
+                :smtp_host, :smtp_port, :smtp_username, :smtp_password, :smtp_encryption,
                 :sendgrid_api_key, :mailgun_domain, :mailgun_api_key, :webhook_signing_secret
             )
             ON DUPLICATE KEY UPDATE
@@ -196,9 +200,9 @@ final class DocumentDeliveryService
         return $this->getProviderConfig($tenantId);
     }
 
-    public function listPortalDocuments(string $tenantId, int $accountId): array
+    public function listPortalDocuments(string $tenantId, string $accountIdentifier): array
     {
-        $customerEmail = $this->accountEmail($tenantId, $accountId);
+        $customerEmail = $this->accountEmail($tenantId, $accountIdentifier);
 
         $stmt = $this->pdo->prepare(
             'SELECT d.id, d.document_no, d.type, d.status, d.currency_code, d.total_gross, d.issue_date, d.due_date, d.finalized_at
@@ -223,19 +227,19 @@ final class DocumentDeliveryService
         ], $stmt->fetchAll() ?: []);
     }
 
-    public function getPortalDocument(string $tenantId, int $accountId, int $documentId): array
+    public function getPortalDocument(string $tenantId, string $accountIdentifier, int $documentId): array
     {
-        $customerEmail = $this->accountEmail($tenantId, $accountId);
+        $customerEmail = $this->accountEmail($tenantId, $accountIdentifier);
 
         $stmt = $this->pdo->prepare(
-            'SELECT d.id, d.document_no, d.type, d.status, d.currency_code, d.total_net, d.total_tax, d.total_gross,
+            "SELECT d.id, d.document_no, d.type, d.status, d.currency_code, d.total_net, d.total_tax, d.total_gross,
                     d.discount_amount, d.shipping_amount, d.issue_date, d.due_date, d.finalized_at,
                     c.email AS customer_email,
-                    COALESCE(NULLIF(c.company_name, \'\'), TRIM(CONCAT(COALESCE(c.first_name, \'\'), \' \', COALESCE(c.last_name, \'\')))) AS customer_name
+                    COALESCE(NULLIF(c.company_name, ''), TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, '')))) AS customer_name
              FROM billing_documents d
              INNER JOIN billing_customers c ON c.id = d.customer_id
              WHERE d.tenant_id = :tenant_id AND d.id = :document_id
-             LIMIT 1'
+             LIMIT 1"
         );
         $stmt->execute([
             'tenant_id' => $tenantId,
@@ -287,6 +291,56 @@ final class DocumentDeliveryService
         ];
     }
 
+    public function processQueue(string $tenantId, int $limit = 25): array
+    {
+        $limit = max(1, min($limit, 100));
+        $providerConfig = $this->loadProviderConfigForWorker($tenantId);
+
+        $stmt = $this->pdo->prepare(
+            'SELECT id, recipient, subject, template_key, context_json, retry_count
+             FROM email_queue
+             WHERE tenant_id = :tenant_id
+               AND status IN (\'queued\', \'retry\')
+               AND (next_retry_at IS NULL OR next_retry_at <= CURRENT_TIMESTAMP)
+             ORDER BY id ASC
+             LIMIT :limit'
+        );
+        $stmt->bindValue('tenant_id', $tenantId);
+        $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $processed = 0;
+        $failed = 0;
+        $rescheduled = 0;
+        $skipped = 0;
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0 || !$this->markQueueProcessing($tenantId, $id)) {
+                $skipped++;
+                continue;
+            }
+
+            try {
+                $this->dispatchQueueMessage($tenantId, $row, $providerConfig);
+                $processed++;
+            } catch (\Throwable $exception) {
+                if ($this->markQueueRetry($tenantId, $id, (int) ($row['retry_count'] ?? 0), $exception->getMessage())) {
+                    $rescheduled++;
+                }
+                $failed++;
+            }
+        }
+
+        return [
+            'processed' => $processed,
+            'failed' => $failed,
+            'rescheduled' => $rescheduled,
+            'skipped' => $skipped,
+            'metrics' => $this->queueMetrics($tenantId),
+        ];
+    }
+
     public function trackEvent(string $tenantId, array $payload): array
     {
         $eventType = strtolower(trim((string) ($payload['event_type'] ?? '')));
@@ -315,17 +369,23 @@ final class DocumentDeliveryService
         ];
     }
 
-    private function accountEmail(string $tenantId, int $accountId): string
+    private function accountEmail(string $tenantId, string $identifier): string
     {
+        $normalizedIdentifier = trim($identifier);
+
+        $where = ctype_digit($normalizedIdentifier)
+            ? 'id = :identifier'
+            : 'LOWER(email) = :identifier';
+
         $stmt = $this->pdo->prepare(
-            'SELECT email
+            "SELECT email
              FROM tenant_accounts
-             WHERE tenant_id = :tenant_id AND id = :id AND account_type = :account_type AND deleted_at IS NULL
-             LIMIT 1'
+             WHERE tenant_id = :tenant_id AND {$where} AND account_type = :account_type AND deleted_at IS NULL
+             LIMIT 1"
         );
         $stmt->execute([
             'tenant_id' => $tenantId,
-            'id' => $accountId,
+            'identifier' => ctype_digit($normalizedIdentifier) ? (int) $normalizedIdentifier : strtolower($normalizedIdentifier),
             'account_type' => 'customer',
         ]);
 
@@ -378,6 +438,136 @@ final class DocumentDeliveryService
             'variables' => is_array($variables) ? array_values($variables) : [],
             'attachments' => is_array($attachments) ? array_values($attachments) : [],
             'updated_at' => $row['updated_at'] ?? null,
+        ];
+    }
+
+    private function loadProviderConfigForWorker(string $tenantId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT provider, from_email, smtp_host, sendgrid_api_key, mailgun_domain, mailgun_api_key
+             FROM document_delivery_provider_configs
+             WHERE tenant_id = :tenant_id
+             LIMIT 1'
+        );
+        $stmt->execute(['tenant_id' => $tenantId]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            throw new RuntimeException('provider_not_configured');
+        }
+
+        return $row;
+    }
+
+    private function markQueueProcessing(string $tenantId, int $id): bool
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE email_queue
+             SET status = :status, updated_at = CURRENT_TIMESTAMP
+             WHERE tenant_id = :tenant_id
+               AND id = :id
+               AND status IN (\'queued\', \'retry\')'
+        );
+        $stmt->execute([
+            'tenant_id' => $tenantId,
+            'id' => $id,
+            'status' => 'processing',
+        ]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    private function dispatchQueueMessage(string $tenantId, array $message, array $providerConfig): void
+    {
+        $provider = strtolower((string) ($providerConfig['provider'] ?? 'smtp'));
+        if (trim((string) ($providerConfig['from_email'] ?? '')) === '') {
+            throw new RuntimeException('missing_from_email');
+        }
+
+        if ($provider === 'smtp' && trim((string) ($providerConfig['smtp_host'] ?? '')) === '') {
+            throw new RuntimeException('smtp_host_missing');
+        }
+        if ($provider === 'sendgrid' && trim((string) ($providerConfig['sendgrid_api_key'] ?? '')) === '') {
+            throw new RuntimeException('sendgrid_api_key_missing');
+        }
+        if ($provider === 'mailgun' && (trim((string) ($providerConfig['mailgun_domain'] ?? '')) === '' || trim((string) ($providerConfig['mailgun_api_key'] ?? '')) === '')) {
+            throw new RuntimeException('mailgun_credentials_missing');
+        }
+
+        $messageId = 'delivery-' . $tenantId . '-' . (int) ($message['id'] ?? 0) . '-' . bin2hex(random_bytes(4));
+
+        $stmt = $this->pdo->prepare(
+            'UPDATE email_queue
+             SET status = :status,
+                 provider = :provider,
+                 message_id = :message_id,
+                 processed_at = CURRENT_TIMESTAMP,
+                 updated_at = CURRENT_TIMESTAMP,
+                 last_error = NULL
+             WHERE tenant_id = :tenant_id AND id = :id'
+        );
+        $stmt->execute([
+            'status' => 'sent',
+            'provider' => $provider,
+            'message_id' => $messageId,
+            'tenant_id' => $tenantId,
+            'id' => (int) ($message['id'] ?? 0),
+        ]);
+    }
+
+    private function markQueueRetry(string $tenantId, int $id, int $retryCount, string $error): bool
+    {
+        $nextRetryCount = $retryCount + 1;
+        $status = $nextRetryCount >= self::MAX_RETRY_COUNT ? 'failed' : 'retry';
+        $nextRetrySeconds = $status === 'retry' ? min(1800, 60 * (2 ** max(0, $nextRetryCount - 1))) : null;
+
+        $stmt = $this->pdo->prepare(
+            'UPDATE email_queue
+             SET status = :status,
+                 retry_count = :retry_count,
+                 next_retry_at = IF(:next_retry_at IS NULL, NULL, TIMESTAMPADD(SECOND, :next_retry_at, CURRENT_TIMESTAMP)),
+                 last_error = :last_error,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE tenant_id = :tenant_id AND id = :id'
+        );
+        $stmt->execute([
+            'status' => $status,
+            'retry_count' => $nextRetryCount,
+            'next_retry_at' => $nextRetrySeconds,
+            'last_error' => mb_substr($error, 0, 512),
+            'tenant_id' => $tenantId,
+            'id' => $id,
+        ]);
+
+        return $status === 'retry';
+    }
+
+    private function queueMetrics(string $tenantId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT status, COUNT(*) AS total
+             FROM email_queue
+             WHERE tenant_id = :tenant_id
+             GROUP BY status'
+        );
+        $stmt->execute(['tenant_id' => $tenantId]);
+
+        $metrics = [
+            'queued' => 0,
+            'retry' => 0,
+            'processing' => 0,
+            'sent' => 0,
+            'failed' => 0,
+        ];
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $status = (string) ($row['status'] ?? '');
+            $metrics[$status] = (int) ($row['total'] ?? 0);
+        }
+
+        return [
+            'status' => $metrics,
+            'max_retry_count' => self::MAX_RETRY_COUNT,
         ];
     }
 }

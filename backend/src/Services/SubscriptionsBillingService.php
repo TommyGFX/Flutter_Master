@@ -326,8 +326,8 @@ final class SubscriptionsBillingService
 
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $queueStmt = $this->pdo->prepare(
-            'INSERT INTO email_queue (tenant_id, to_email, subject, body, status)
-             VALUES (:tenant_id, :to_email, :subject, :body, :status)'
+            'INSERT INTO email_queue (tenant_id, recipient, subject, template_key, context_json, status)
+             VALUES (:tenant_id, :recipient, :subject, :template_key, :context_json, :status)'
         );
         $updateStmt = $this->pdo->prepare(
             'UPDATE subscription_invoices
@@ -341,9 +341,14 @@ final class SubscriptionsBillingService
         foreach ($rows as $row) {
             $queueStmt->execute([
                 ':tenant_id' => $tenantId,
-                ':to_email' => 'billing+' . strtolower($tenantId) . '@example.invalid',
+                ':recipient' => 'billing+' . strtolower($tenantId) . '@example.invalid',
                 ':subject' => 'Abo-Rechnung ' . ($row['document_number'] ?? ('#' . $row['billing_document_id'])),
-                ':body' => 'Ihre periodische Rechnung über ' . number_format((float) ($row['grand_total'] ?? 0), 2, ',', '.') . ' ' . ($row['currency_code'] ?? 'EUR') . ' wurde erstellt.',
+                ':template_key' => 'subscription_invoice_created',
+                ':context_json' => json_encode([
+                    'document_number' => $row['document_number'] ?? ('#' . $row['billing_document_id']),
+                    'grand_total' => (float) ($row['grand_total'] ?? 0),
+                    'currency_code' => $row['currency_code'] ?? 'EUR',
+                ], JSON_THROW_ON_ERROR),
                 ':status' => 'queued',
             ]);
 
