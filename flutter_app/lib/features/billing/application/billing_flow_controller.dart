@@ -15,6 +15,8 @@ final billingFlowControllerProvider =
 );
 
 class BillingFlowState {
+  static const _unchanged = Object();
+
   const BillingFlowState({
     this.isRunning = false,
     this.error,
@@ -37,7 +39,7 @@ class BillingFlowState {
 
   BillingFlowState copyWith({
     bool? isRunning,
-    String? error,
+    Object? error = _unchanged,
     int? quoteId,
     int? invoiceId,
     String? documentStatus,
@@ -47,7 +49,7 @@ class BillingFlowState {
   }) {
     return BillingFlowState(
       isRunning: isRunning ?? this.isRunning,
-      error: error,
+      error: identical(error, _unchanged) ? this.error : error as String?,
       quoteId: quoteId ?? this.quoteId,
       invoiceId: invoiceId ?? this.invoiceId,
       documentStatus: documentStatus ?? this.documentStatus,
@@ -63,34 +65,74 @@ class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
   BillingFlowState build() => const BillingFlowState();
 
   Future<void> runQuoteToPaidFlow() async {
+    if (state.isRunning) {
+      return;
+    }
+
     final repository = ref.read(billingFlowRepositoryProvider);
 
-    state = const BillingFlowState(isRunning: true, steps: ['Flow gestartet']);
+    state = state.copyWith(
+      isRunning: true,
+      error: null,
+      quoteId: null,
+      invoiceId: null,
+      documentStatus: null,
+      historyEntries: 0,
+      pdfFilename: null,
+      steps: ['Flow gestartet'],
+    );
 
     try {
-      final customerId = await repository.ensureCustomer();
+      final customerId = await _runStep(
+        action: repository.ensureCustomer,
+        errorContext: 'Kunde konnte nicht vorbereitet werden',
+      );
       _appendStep('Kunde bereit: #$customerId');
 
-      final quoteId = await repository.createQuote(customerId: customerId);
+      final quoteId = await _runStep(
+        action: () => repository.createQuote(customerId: customerId),
+        errorContext: 'Angebot konnte nicht erstellt werden',
+      );
       _appendStep('Angebot erstellt: #$quoteId');
 
-      await repository.finalizeDocument(quoteId);
+      await _runStep(
+        action: () => repository.finalizeDocument(quoteId),
+        errorContext: 'Angebot konnte nicht finalisiert werden',
+      );
       _appendStep('Angebot finalisiert');
 
-      final invoiceId = await repository.convertQuoteToInvoice(quoteId);
+      final invoiceId = await _runStep(
+        action: () => repository.convertQuoteToInvoice(quoteId),
+        errorContext: 'Angebot konnte nicht in Rechnung konvertiert werden',
+      );
       _appendStep('Angebot in Rechnung konvertiert: #$invoiceId');
 
-      final invoiceStatus = await repository.finalizeDocument(invoiceId);
+      final invoiceStatus = await _runStep(
+        action: () => repository.finalizeDocument(invoiceId),
+        errorContext: 'Rechnung konnte nicht finalisiert werden',
+      );
       _appendStep('Rechnung finalisiert (Status: $invoiceStatus)');
 
-      await repository.createPaymentLink(invoiceId);
+      await _runStep(
+        action: () => repository.createPaymentLink(invoiceId),
+        errorContext: 'Zahlungslink konnte nicht erstellt werden',
+      );
       _appendStep('Zahlungslink erstellt');
 
-      final paidStatus = await repository.recordPayment(invoiceId);
+      final paidStatus = await _runStep(
+        action: () => repository.recordPayment(invoiceId),
+        errorContext: 'Zahlung konnte nicht verbucht werden',
+      );
       _appendStep('Zahlung verbucht (Status: $paidStatus)');
 
-      final historyEntries = await repository.fetchHistoryEntries(invoiceId);
-      final pdfFilename = await repository.exportPdf(invoiceId);
+      final historyEntries = await _runStep(
+        action: () => repository.fetchHistoryEntries(invoiceId),
+        errorContext: 'Dokumenthistorie konnte nicht geladen werden',
+      );
+      final pdfFilename = await _runStep(
+        action: () => repository.exportPdf(invoiceId),
+        errorContext: 'PDF-Export konnte nicht geladen werden',
+      );
 
       state = state.copyWith(
         isRunning: false,
@@ -100,15 +142,54 @@ class BillingFlowController extends AutoDisposeNotifier<BillingFlowState> {
         historyEntries: historyEntries,
         pdfFilename: pdfFilename,
       );
+    } on BillingFlowException catch (error) {
+      state = state.copyWith(isRunning: false, error: error.message);
+      _appendStep('Fehler: ${error.message}');
     } catch (error) {
-      state = state.copyWith(isRunning: false, error: error.toString());
-      _appendStep('Fehler: ${error.toString()}');
+      final fallbackMessage = 'Unerwarteter Fehler im Billing-Flow: $error';
+      state = state.copyWith(isRunning: false, error: fallbackMessage);
+      _appendStep('Fehler: $fallbackMessage');
     }
+  }
+
+  Future<T> _runStep<T>({required Future<T> Function() action, required String errorContext}) async {
+    try {
+      return await action();
+    } on DioException catch (error) {
+      throw BillingFlowException(_buildDioErrorMessage(errorContext, error));
+    } catch (error) {
+      throw BillingFlowException('$errorContext: $error');
+    }
+  }
+
+  String _buildDioErrorMessage(String context, DioException error) {
+    final statusCode = error.response?.statusCode;
+    final response = error.response?.data;
+    final responseMessage = switch (response) {
+      {'error': final Object value} => value.toString(),
+      {'message': final Object value} => value.toString(),
+      _ => null,
+    };
+
+    return [
+      context,
+      if (statusCode != null) '(HTTP $statusCode)',
+      if (responseMessage != null && responseMessage.isNotEmpty) ': $responseMessage',
+    ].join(' ');
   }
 
   void _appendStep(String message) {
     state = state.copyWith(steps: [...state.steps, message]);
   }
+}
+
+class BillingFlowException implements Exception {
+  const BillingFlowException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 abstract class BillingFlowRepository {

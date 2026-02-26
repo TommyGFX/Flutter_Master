@@ -35,6 +35,8 @@ class BillingFlowScreen extends ConsumerWidget {
                   : const Icon(Icons.play_arrow),
               label: Text(state.isRunning ? 'Flow läuft…' : 'E2E-Flow ausführen'),
             ),
+            const SizedBox(height: 12),
+            _FlowStatusBanner(state: state),
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,
@@ -47,25 +49,77 @@ class BillingFlowScreen extends ConsumerWidget {
                 _ResultChip(label: 'PDF', value: state.pdfFilename ?? '-'),
               ],
             ),
-            if (state.error != null) ...[
-              const SizedBox(height: 12),
-              Text(state.error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
             const SizedBox(height: 16),
             Expanded(
-              child: ListView.builder(
-                itemCount: state.steps.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    dense: true,
-                    leading: CircleAvatar(radius: 12, child: Text('${index + 1}')),
-                    title: Text(state.steps[index]),
-                  );
-                },
-              ),
+              child: state.steps.isEmpty
+                  ? const Center(
+                      child: Text('Noch keine Schritte vorhanden. Starte den Billing-Flow für eine Live-Timeline.'),
+                    )
+                  : ListView.separated(
+                      itemCount: state.steps.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          dense: true,
+                          leading: CircleAvatar(radius: 12, child: Text('${index + 1}')),
+                          title: Text(state.steps[index]),
+                          trailing: Icon(
+                            state.steps[index].startsWith('Fehler')
+                                ? Icons.error_outline
+                                : Icons.check_circle_outline,
+                            color: state.steps[index].startsWith('Fehler')
+                                ? Theme.of(context).colorScheme.error
+                                : Theme.of(context).colorScheme.primary,
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FlowStatusBanner extends StatelessWidget {
+  const _FlowStatusBanner({required this.state});
+
+  final BillingFlowState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (icon, text, backgroundColor, foregroundColor) = switch ((state.isRunning, state.error, state.documentStatus)) {
+      (true, _, _) => (Icons.sync, 'Flow wird ausgeführt …', colorScheme.primaryContainer, colorScheme.onPrimaryContainer),
+      (_, final String _, _) => (Icons.warning_amber_rounded, state.error!, colorScheme.errorContainer, colorScheme.onErrorContainer),
+      (_, _, final String status) when status.toLowerCase() == 'paid' => (
+          Icons.verified,
+          'Flow erfolgreich abgeschlossen (Status: $status).',
+          colorScheme.tertiaryContainer,
+          colorScheme.onTertiaryContainer,
+        ),
+      _ => (Icons.info_outline, 'Bereit für den nächsten Testlauf.', colorScheme.surfaceContainerHighest, colorScheme.onSurfaceVariant),
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: foregroundColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: foregroundColor, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_master_app/features/billing/application/billing_flow_controller.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('BillingFlowController runs Angebot -> bezahlt sequence', () async {
@@ -22,6 +23,24 @@ void main() {
     expect(state.historyEntries, 5);
     expect(state.pdfFilename, 'billing-document-202.pdf');
     expect(state.steps.length, greaterThanOrEqualTo(7));
+  });
+
+  test('BillingFlowController reports contextual error for API failures', () async {
+    final container = ProviderContainer(
+      overrides: [
+        billingFlowRepositoryProvider.overrideWithValue(_FailingBillingFlowRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(billingFlowControllerProvider.notifier);
+    await controller.runQuoteToPaidFlow();
+
+    final state = container.read(billingFlowControllerProvider);
+    expect(state.isRunning, isFalse);
+    expect(state.error, contains('Angebot konnte nicht erstellt werden'));
+    expect(state.error, contains('HTTP 422'));
+    expect(state.steps.last, startsWith('Fehler:'));
   });
 }
 
@@ -49,4 +68,19 @@ class _FakeBillingFlowRepository implements BillingFlowRepository {
 
   @override
   Future<String?> exportPdf(int documentId) async => 'billing-document-202.pdf';
+}
+
+class _FailingBillingFlowRepository extends _FakeBillingFlowRepository {
+  @override
+  Future<int> createQuote({required int customerId}) async {
+    throw DioException(
+      requestOptions: RequestOptions(path: '/billing/documents'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/billing/documents'),
+        statusCode: 422,
+        data: {'error': 'validation failed'},
+      ),
+      type: DioExceptionType.badResponse,
+    );
+  }
 }

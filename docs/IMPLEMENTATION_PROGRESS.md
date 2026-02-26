@@ -414,3 +414,18 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - Testabdeckung erweitert: `billing_flow_controller_test.dart` prüft den E2E-Orchestrierungsablauf deterministisch über ein Repository-Double.
 
 **Aktueller Status:** Phase 0 abgeschlossen; Phase 1 UI/E2E-Umsetzung ist funktional vervollständigt und für produktive Härtung vorbereitet.
+
+## Schritt 28 – PLUGIN_ROADMAP Phase 1 Billing-Flow produktiv gehärtet (abgeschlossen)
+- **Phase-0-Review** erneut validiert und als abgeschlossen dokumentiert (Roadmap-Abnahmestatus explizit als ✅ markiert).
+- **BillingFlowController** robustifiziert:
+  - Kontextbezogene Fehlerbehandlung je Flow-Step (`BillingFlowException`) inkl. Dio-Fehlerauswertung (`HTTP-Status`, `error/message` aus Backend-Response).
+  - Schutz gegen parallele Ausführung (`isRunning`-Guard) und deterministisches Zurücksetzen des UI-States vor jedem Lauf.
+- **UX-Polish** im `BillingFlowScreen` umgesetzt:
+  - Status-Banner für Zustände *running/success/error/ready*.
+  - Verbesserte Timeline mit Erfolgs-/Fehlerindikatoren.
+  - Empty-State statt leerer Liste vor dem ersten Lauf.
+- **Qualitätssicherung erweitert**:
+  - Controller-Test für API-Fehlerpfad inkl. kontextbezogener Fehlermeldung ergänzt.
+  - Golden-Test für den initialen Billing-Flow-Screen ergänzt.
+
+**Abnahme-Status Phase 1 Hardening:** Error-Handling, Golden-Test-Baseline und UX-Polish sind implementiert und testbar dokumentiert.
