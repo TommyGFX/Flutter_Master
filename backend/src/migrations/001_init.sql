@@ -223,3 +223,31 @@ CREATE TABLE IF NOT EXISTS approval_requests (
     INDEX idx_approval_tenant_status (tenant_id, status, created_at),
     INDEX idx_approval_target (tenant_id, target_type, target_id)
 );
+
+CREATE TABLE IF NOT EXISTS tenant_accounts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    account_type VARCHAR(32) NOT NULL,
+    role_id BIGINT UNSIGNED NULL,
+    first_name VARCHAR(120) NOT NULL,
+    last_name VARCHAR(120) NOT NULL,
+    company VARCHAR(255) NULL,
+    street VARCHAR(255) NULL,
+    house_number VARCHAR(50) NULL,
+    postal_code VARCHAR(32) NULL,
+    city VARCHAR(120) NULL,
+    country VARCHAR(120) NULL,
+    phone VARCHAR(64) NULL,
+    email VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    vat_number VARCHAR(64) NULL,
+    email_confirmed TINYINT(1) NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE KEY uq_tenant_accounts_email (tenant_id, email),
+    INDEX idx_tenant_accounts_type (tenant_id, account_type),
+    INDEX idx_tenant_accounts_role (tenant_id, role_id),
+    CONSTRAINT fk_tenant_accounts_role FOREIGN KEY (role_id) REFERENCES roles (id)
+);

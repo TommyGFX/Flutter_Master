@@ -136,3 +136,15 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 - JWT-basierte Superadmin-Absicherung für die neuen Plattform-Endpunkte umgesetzt (`Authorization: Bearer ...`, `is_superadmin=true`).
 - Auditierbarkeit erweitert: Abruf von Plattform-Stats/Reports und das Erzeugen von Impersonation-Tokens werden selbst als Audit-Events protokolliert.
 - Progress-Dokumentation aktualisiert, um den aktuellen Lieferstand transparent nachvollziehbar zu machen.
+
+## Schritt 12 – Tenant-fähige Admin/User/Customer-Verwaltung (abgeschlossen)
+- Neue zentrale Account-Persistenz `tenant_accounts` mit Soft-Delete und den geforderten Stammdatenfeldern ergänzt.
+- Neue API-Endpunkte für rollenbasiertes Account-Management ergänzt:
+  - `GET|POST|PUT|DELETE /api/admin/users`
+  - `GET|POST|PUT|DELETE /api/customers`
+  - `GET|PUT /api/self/profile`
+- RBAC-Verhalten in der API umgesetzt:
+  - **Admin** verwaltet User + Customer vollständig.
+  - **User (Mitarbeiter)** verwaltet Customer vollständig.
+  - **Customer** kann nur den eigenen Datensatz lesen und pflegen (Self-Service).
+- `role_id`-Anbindung über bestehende `roles`/`role_permissions` Tabellen integriert (Fallback auf account_type-basierte Rechte).

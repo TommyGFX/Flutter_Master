@@ -8,6 +8,7 @@ use App\Controllers\AuthController;
 use App\Controllers\AdminPluginController;
 use App\Controllers\CrudController;
 use App\Controllers\DocumentController;
+use App\Controllers\AccountManagementController;
 use App\Controllers\StripeController;
 use App\Controllers\UploadController;
 use App\Controllers\PlatformAdminController;
@@ -42,6 +43,7 @@ final class App
         $document = new DocumentController(new PdfRendererService(), new TenantMailerService(), new TemplateRendererService());
         $adminPlugins = new AdminPluginController(new RbacService(), new ApprovalService(), new AuditLogService());
         $platformAdmin = new PlatformAdminController(new JwtService(), new RefreshTokenService(), new AuditLogService());
+        $accounts = new AccountManagementController();
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -77,6 +79,19 @@ final class App
         $router->add('GET', '/api/platform/admin-stats', [$platformAdmin, 'adminStats']);
         $router->add('GET', '/api/platform/audit-logs', [$platformAdmin, 'globalAuditLogs']);
         $router->add('GET', '/api/platform/reports', [$platformAdmin, 'platformReports']);
+
+        $router->add('GET', '/api/admin/users', [$accounts, 'listUsers']);
+        $router->add('POST', '/api/admin/users', [$accounts, 'createUser']);
+        $router->add('PUT', '/api/admin/users/{id}', [$accounts, 'updateUser']);
+        $router->add('DELETE', '/api/admin/users/{id}', [$accounts, 'deleteUser']);
+
+        $router->add('GET', '/api/customers', [$accounts, 'listCustomers']);
+        $router->add('POST', '/api/customers', [$accounts, 'createCustomer']);
+        $router->add('PUT', '/api/customers/{id}', [$accounts, 'updateCustomer']);
+        $router->add('DELETE', '/api/customers/{id}', [$accounts, 'deleteCustomer']);
+
+        $router->add('GET', '/api/self/profile', [$accounts, 'selfProfile']);
+        $router->add('PUT', '/api/self/profile', [$accounts, 'updateSelfProfile']);
 
         $router->dispatch($request);
     }

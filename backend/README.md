@@ -40,6 +40,9 @@ Kopiere `.env.example` nach `.env` und passe DB/Stripe/SMTP Werte an.
 - `GET /api/platform/admin-stats`
 - `GET /api/platform/audit-logs`
 - `GET /api/platform/reports`
+- `GET|POST|PUT|DELETE /api/admin/users`
+- `GET|POST|PUT|DELETE /api/customers`
+- `GET|PUT /api/self/profile`
 
 
 ## Auth Hinweise
@@ -169,3 +172,16 @@ Diese Endpunkte sind **plattformweit** und nur mit gültigem Superadmin-JWT nutz
     (`X-Audit-Tenant-Id`, `X-Audit-Action`, `X-Audit-Status`).
 - `GET /api/platform/reports`
   - Erweiterte Analytics je Tenant inkl. Summaries (User, aktive Plugins, offene Approvals, Sessions, Audit-Volumen).
+
+## Tenant-fähige Admin/User/Customer-Verwaltung
+- Persistenz über `tenant_accounts` mit Soft-Delete (`deleted_at`) und Lifecycle-Attributen (`is_active`, `email_confirmed`, `created_at`, `updated_at`).
+- Enthaltene Felder:
+  - `id`, `first_name`, `last_name`, `company`, `street`, `house_number`, `postal_code`, `city`, `country`, `phone`, `email`, `password_hash`, `vat_number`, `tenant_id`, `role_id`, `email_confirmed`, `is_active`, `created_at`, `updated_at`, `deleted_at`, `account_type`.
+- API-Rollenverhalten:
+  - **Admin**: Vollzugriff auf User + Customer CRUD.
+  - **User (Mitarbeiter)**: Vollzugriff auf Customer CRUD.
+  - **Customer**: nur eigene Daten lesen/ändern (`/api/customers` liefert nur den eigenen Datensatz, Updates über `/api/self/profile`).
+
+### Relevante Header
+- `X-Tenant-Id`: Tenant-Kontext (Pflicht)
+- `X-User-Id`: Aktor-ID aus `tenant_accounts` (Pflicht)
