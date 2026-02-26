@@ -62,6 +62,30 @@ void main() {
     expect(state.error, contains('HTTP 422'));
     expect(state.steps.last, startsWith('Fehler:'));
   });
+
+  test('BillingDocumentSnapshot parses exchange_rate from string payloads', () {
+    final snapshot = BillingDocumentSnapshot.fromApiData({
+      'document_number': 'Q-2026-0099',
+      'currency_code': 'USD',
+      'exchange_rate': '1.080000',
+    });
+
+    expect(snapshot.documentNumber, 'Q-2026-0099');
+    expect(snapshot.currencyCode, 'USD');
+    expect(snapshot.exchangeRate, 1.08);
+  });
+
+
+  test('BillingDocumentSnapshot throws on invalid exchange_rate payloads', () {
+    expect(
+      () => BillingDocumentSnapshot.fromApiData({
+        'document_number': 'Q-2026-0100',
+        'currency_code': 'USD',
+        'exchange_rate': 'not-a-number',
+      }),
+      throwsA(isA<FormatException>()),
+    );
+  });
 }
 
 class _FakeBillingFlowRepository implements BillingFlowRepository {

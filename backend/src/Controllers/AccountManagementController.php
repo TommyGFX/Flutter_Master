@@ -318,6 +318,16 @@ final class AccountManagementController
 
     private function actor(string $tenantId, Request $request): ?array
     {
+        if ($this->isSuperadminWildcardRequest($tenantId, $request)) {
+            return [
+                'id' => 0,
+                'tenant_id' => $tenantId,
+                'email' => 'superadmin@local',
+                'account_type' => 'admin',
+                'is_active' => 1,
+            ];
+        }
+
         $actorId = (int) ($request->header('X-User-Id') ?? 0);
         if ($actorId <= 0) {
             Response::json(['error' => 'missing_user_header', 'required_header' => 'X-User-Id'], 422);
@@ -331,6 +341,21 @@ final class AccountManagementController
         }
 
         return $actor;
+    }
+
+    private function isSuperadminWildcardRequest(string $tenantId, Request $request): bool
+    {
+        if ($tenantId !== 'superadmin') {
+            return false;
+        }
+
+        $rawPermissions = trim((string) ($request->header('X-Permissions') ?? ''));
+        if ($rawPermissions === '') {
+            return false;
+        }
+
+        $permissions = array_values(array_filter(array_map('trim', explode(',', $rawPermissions))));
+        return in_array('*', $permissions, true);
     }
 
     private function authorize(string $tenantId, Request $request, string $requiredPermission): bool

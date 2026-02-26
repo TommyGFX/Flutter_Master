@@ -192,6 +192,7 @@ mixin _ApiClientMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     final headers = <String, String>{
       'X-Tenant-Id': authState.tenantId ?? 'tenant_1',
       'X-Permissions': authState.permissions.join(','),
+      if ((authState.userId ?? '').isNotEmpty) 'X-User-Id': authState.userId!,
       if ((authState.token ?? '').isNotEmpty) 'Authorization': 'Bearer ${authState.token}',
       ...extraHeaders,
     };
