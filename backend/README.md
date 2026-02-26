@@ -213,3 +213,20 @@ Diese Endpunkte sind **plattformweit** und nur mit gültigem Superadmin-JWT nutz
 - Tenant-Providerkonfiguration für `smtp`, `sendgrid`, `mailgun` über `document_delivery_provider_configs`.
 - Kundenportal liest tenant-sichere Dokumente aus Billing und liefert vorhandene Zahlungslinks mit aus.
 - Optionales Tracking erfasst `mail_open`/`link_click` in `document_delivery_tracking_events`.
+
+
+## Platform Security/Ops (Roadmap Phase 10)
+- `GET /api/platform/security/gdpr`
+- `PUT /api/platform/security/gdpr/retention-rules`
+- `POST /api/platform/security/gdpr/exports`
+- `POST /api/platform/security/gdpr/deletions`
+- `GET|PUT /api/platform/security/auth-policies`
+- `GET|POST /api/platform/security/backups`
+- `POST /api/platform/security/backups/restore`
+- `GET|POST /api/platform/security/archive-records`
+- `GET|PUT /api/platform/security/reliability/policies`
+
+Hinweise:
+- Alle Endpunkte sind tenant-spezifisch und erwarten `X-Tenant-Id`.
+- DSGVO-Workflows sind als auditable Requests angelegt (`platform_security_data_exports`, `platform_security_deletion_requests`).
+- Backup/Restore und Archivierung sind als MVP synchron als `completed` hinterlegt und können auf Worker-Betrieb erweitert werden.

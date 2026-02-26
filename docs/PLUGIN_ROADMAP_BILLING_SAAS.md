@@ -262,7 +262,7 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 | 7 | Team & Rechte | Teilweise vorhanden | Rollen auf Plugin-Capabilities mappen |
 | 8 | Integrationen | In Umsetzung (Backend-MVP implementiert) | Adapter-Worker + Flutter-Import-Wizard-UI vervollständigen |
 | 9 | Katalog/Preise | In Umsetzung (Backend-MVP implementiert) | Flutter-Katalog-UI + Angebotseditor-Integration der Preislogik |
-| 10 | Security/Ops | Teilweise vorhanden | DSGVO-Löschworkflow spezifizieren |
+| 10 | Security/Ops | In Umsetzung (Backend-MVP implementiert) | Worker-gestützte Lösch-/Restore-Jobs + operatives Monitoring verdrahten |
 
 
 ### Phase 6 – Implementierungsstand (Backend-MVP)
@@ -283,3 +283,11 @@ Diese Roadmap priorisiert die angefragten Features in kleinen, aufeinander aufba
 - `catalog_pricing` Plugin-Endpunkte für Produktstamm, Preislisten, Staffelregeln, Bundles und Rabattcodes ergänzt.
 - Preislogik-Service für tenant-sichere Quote-Berechnung (Netto/Rabatt/Steuer/Gesamt) inkl. Preislisten- und Rabattcode-Auflösung implementiert.
 - Datenmodell für SKU-basierten Produktkatalog sowie wiederverwendbare Preisregeln in Sales-/Billing-Flows erweitert.
+
+
+### Phase 10 – Implementierungsstand (Backend-MVP)
+- `platform_security_ops` Plugin-Endpunkte für DSGVO-Übersicht, Datenexporte und Löschanfragen (inkl. Fristen-/Retention-Regeln) ergänzt.
+- Sicherheitsfeatures für Business-Tiers umgesetzt: tenant-spezifische Auth-Policies mit MFA-Modi (`off|optional|required`) und optionalen SSO-Providern (`saml|oidc`).
+- Backup/Restore-Basis implementiert (Sicherungs- und Restore-Jobs mit Status, Prüfsumme und Storage-Key-Metadaten).
+- Revisionssichere Ablage als versionierte Archiv-Records mit Integritätshash und Aufbewahrungsdatum bereitgestellt.
+- Reliability-Baseline ergänzt: konfigurierbare Richtlinien für Rate-Limits, Monitoring, Alerting und Status-Page pro Tenant.

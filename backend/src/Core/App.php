@@ -22,6 +22,7 @@ use App\Controllers\PlatformAdminController;
 use App\Controllers\PluginFoundationController;
 use App\Controllers\AutomationIntegrationsController;
 use App\Controllers\CatalogPricingController;
+use App\Controllers\PlatformSecurityOpsController;
 use App\Services\JwtService;
 use App\Services\PdfRendererService;
 use App\Services\RefreshTokenService;
@@ -40,6 +41,7 @@ use App\Services\TemplateRendererService;
 use App\Services\TenantMailerService;
 use App\Services\AutomationIntegrationsService;
 use App\Services\CatalogPricingService;
+use App\Services\PlatformSecurityOpsService;
 
 final class App
 {
@@ -73,6 +75,7 @@ final class App
         $orgManagement = new OrgManagementController(new OrgManagementService(Database::connection()), new RbacService(), new AuditLogService());
         $automationIntegrations = new AutomationIntegrationsController(new AutomationIntegrationsService(Database::connection()));
         $catalogPricing = new CatalogPricingController(new CatalogPricingService(Database::connection()));
+        $platformSecurityOps = new PlatformSecurityOpsController(new PlatformSecurityOpsService(Database::connection()));
 
         $router->add('POST', '/api/login/company', [$auth, 'loginCompany']);
         $router->add('POST', '/api/login/employee', [$auth, 'loginEmployee']);
@@ -225,6 +228,20 @@ final class App
         $router->add('GET', '/api/billing/catalog/discount-codes', [$catalogPricing, 'listDiscountCodes']);
         $router->add('POST', '/api/billing/catalog/discount-codes', [$catalogPricing, 'saveDiscountCode']);
         $router->add('POST', '/api/billing/catalog/quotes/calculate', [$catalogPricing, 'calculateQuote']);
+
+        $router->add('GET', '/api/platform/security/gdpr', [$platformSecurityOps, 'gdprOverview']);
+        $router->add('PUT', '/api/platform/security/gdpr/retention-rules', [$platformSecurityOps, 'upsertRetentionRule']);
+        $router->add('POST', '/api/platform/security/gdpr/exports', [$platformSecurityOps, 'requestDataExport']);
+        $router->add('POST', '/api/platform/security/gdpr/deletions', [$platformSecurityOps, 'requestDeletion']);
+        $router->add('GET', '/api/platform/security/auth-policies', [$platformSecurityOps, 'listAuthPolicies']);
+        $router->add('PUT', '/api/platform/security/auth-policies', [$platformSecurityOps, 'upsertAuthPolicy']);
+        $router->add('GET', '/api/platform/security/backups', [$platformSecurityOps, 'listBackups']);
+        $router->add('POST', '/api/platform/security/backups', [$platformSecurityOps, 'triggerBackup']);
+        $router->add('POST', '/api/platform/security/backups/restore', [$platformSecurityOps, 'restoreBackup']);
+        $router->add('GET', '/api/platform/security/archive-records', [$platformSecurityOps, 'listArchiveRecords']);
+        $router->add('POST', '/api/platform/security/archive-records', [$platformSecurityOps, 'createArchiveRecord']);
+        $router->add('GET', '/api/platform/security/reliability/policies', [$platformSecurityOps, 'listReliabilityPolicies']);
+        $router->add('PUT', '/api/platform/security/reliability/policies', [$platformSecurityOps, 'upsertReliabilityPolicy']);
 
         $router->add('GET', '/api/billing/customers', [$billingCore, 'listCustomers']);
         $router->add('POST', '/api/billing/customers', [$billingCore, 'createCustomer']);
