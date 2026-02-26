@@ -508,3 +508,20 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 
 **Abnahme-Status Phase 3 (Zwischenstand):** Die Backend-Compliance wurde für Dokumenttyp-spezifische Pflichtlogik und technische E-Rechnungsvalidierung gehärtet.
 
+
+## Schritt 32 – PLUGIN_ROADMAP Phase 3 Tiefenregeln umgesetzt (Reverse-Charge/innergemeinschaftlich + Validator-Härtung)
+- `TaxComplianceDeService` fachlich vertieft:
+  - EU-/Länderkontext für Steuerklassifikation ergänzt (Kundenland aus Dokumentadresse, Verkäuferland aus Tax-Profil).
+  - Differenzierte Kategorien für `reverse_charge` und `intra_community` eingeführt (inkl. Prüfungen auf grenzüberschreitenden EU-Fall und 0%-Steuersatz).
+  - Neue Compliance-Fehlerpfade für Sonderfälle ergänzt (z. B. fehlende USt-Id des Verkäufers bei innergemeinschaftlicher Leistung, Reverse-Charge im Inland).
+  - Warnpfad für Mischfälle (`reverse_charge` + regulär steuerpflichtige Positionen) ergänzt.
+- E-Rechnungs-Validierung für externe Referenzvalidatoren gehärtet:
+  - Pflichtfelder/Formatchecks erweitert (`issueDate`, exaktes Dezimalformat, vorhandene Positionen, vorhandene Tax-Kategorien).
+  - Format-spezifische Identifikatoren auf exakte Referenzwerte verschärft (XRechnung-Spec-Identifier, ZUGFeRD-Profile/Context).
+  - XML-Export um zusätzliche strukturierte Inhalte (`lineItems`, `taxCategories`, `buyerCountry`) erweitert.
+- Regressionstest `backend/tests/Regression/tax_compliance_phase3_regression_test.php` ausgebaut:
+  - Innergemeinschaftlicher Sonderfall mit 0%-Steuer + EU-Auslandsadresse.
+  - Fehler bei fehlender Verkäufer-USt-Id sowie grüner Pfad nach Nachpflege der USt-Id.
+  - Bestehende Preflight-/Import-/Export-Regressionspfade bleiben abgesichert.
+
+**Abnahme-Status Schritt 32:** Die in der Roadmap benannten Phase-3-Tiefenregeln sind backendseitig implementiert und durch Regressionstests gegen Sonderfall-/Validator-Risiken gehärtet.

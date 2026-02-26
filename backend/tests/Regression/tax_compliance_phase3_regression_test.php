@@ -89,6 +89,7 @@ $pdo->prepare('INSERT INTO tenant_tax_profiles (tenant_id, business_name, tax_nu
 
 $insertDocument = $pdo->prepare('INSERT INTO billing_documents (tenant_id, document_type, document_number, status, customer_name_snapshot, currency_code, grand_total, due_date, reference_document_id, totals_json) VALUES (:tenant_id, :document_type, :document_number, :status, :customer_name_snapshot, :currency_code, :grand_total, :due_date, :reference_document_id, :totals_json)');
 $insertLine = $pdo->prepare('INSERT INTO billing_line_items (tenant_id, document_id, description, quantity, unit_price, tax_rate) VALUES (:tenant_id, :document_id, :description, :quantity, :unit_price, :tax_rate)');
+$insertAddress = $pdo->prepare('INSERT INTO billing_document_addresses (tenant_id, document_id, address_type, company_name, country) VALUES (:tenant_id, :document_id, :address_type, :company_name, :country)');
 
 $insertDocument->execute([
     'tenant_id' => $tenantId,
@@ -104,6 +105,7 @@ $insertDocument->execute([
 ]);
 $invoiceId = (int) $pdo->lastInsertId();
 $insertLine->execute(['tenant_id' => $tenantId, 'document_id' => $invoiceId, 'description' => 'Abo', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 19]);
+$insertAddress->execute(['tenant_id' => $tenantId, 'document_id' => $invoiceId, 'address_type' => 'billing', 'company_name' => 'Acme GmbH', 'country' => 'DE']);
 
 $insertDocument->execute([
     'tenant_id' => $tenantId,
@@ -119,6 +121,7 @@ $insertDocument->execute([
 ]);
 $creditId = (int) $pdo->lastInsertId();
 $insertLine->execute(['tenant_id' => $tenantId, 'document_id' => $creditId, 'description' => 'Korrektur', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 19]);
+$insertAddress->execute(['tenant_id' => $tenantId, 'document_id' => $creditId, 'address_type' => 'billing', 'company_name' => 'Acme GmbH', 'country' => 'DE']);
 
 $insertDocument->execute([
     'tenant_id' => $tenantId,
@@ -134,6 +137,23 @@ $insertDocument->execute([
 ]);
 $validInvoiceId = (int) $pdo->lastInsertId();
 $insertLine->execute(['tenant_id' => $tenantId, 'document_id' => $validInvoiceId, 'description' => 'Projektarbeit', 'quantity' => 2, 'unit_price' => 100, 'tax_rate' => 19]);
+$insertAddress->execute(['tenant_id' => $tenantId, 'document_id' => $validInvoiceId, 'address_type' => 'billing', 'company_name' => 'Acme GmbH', 'country' => 'DE']);
+
+$insertDocument->execute([
+    'tenant_id' => $tenantId,
+    'document_type' => 'invoice',
+    'document_number' => 'INV-RC-1',
+    'status' => 'sent',
+    'customer_name_snapshot' => 'EU-Customer Sp. z o.o.',
+    'currency_code' => 'EUR',
+    'grand_total' => 100.0,
+    'due_date' => '2026-02-15',
+    'reference_document_id' => null,
+    'totals_json' => '{}',
+]);
+$reverseChargeInvoiceId = (int) $pdo->lastInsertId();
+$insertLine->execute(['tenant_id' => $tenantId, 'document_id' => $reverseChargeInvoiceId, 'description' => 'EU Beratung', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 0]);
+$insertAddress->execute(['tenant_id' => $tenantId, 'document_id' => $reverseChargeInvoiceId, 'address_type' => 'billing', 'company_name' => 'EU-Customer Sp. z o.o.', 'country' => 'PL']);
 
 $service = new TaxComplianceDeService($pdo, new BillingCoreService($pdo));
 
@@ -146,6 +166,17 @@ assertTrue(($creditPreflight['valid'] ?? true) === false, 'Credit note without n
 assertContains('missing_reference_document', $creditPreflight['errors'], 'Credit note preflight must require reference document.');
 assertContains('credit_or_cancellation_requires_negative_total', $creditPreflight['errors'], 'Credit note preflight must require negative totals.');
 assertContains('credit_or_cancellation_requires_negative_line_items', $creditPreflight['errors'], 'Credit note preflight must require negative line items.');
+
+$reverseChargePreflight = $service->preflightDocument($tenantId, $reverseChargeInvoiceId);
+assertContains('intra_community', $reverseChargePreflight['tax_categories'], 'Cross-border EU zero-tax lines should be classified as intra-community.');
+assertContains('intra_community_requires_seller_vat_id', $reverseChargePreflight['errors'], 'Intra-community flow must require seller VAT ID for compliance.');
+
+$pdo->prepare('UPDATE tenant_tax_profiles SET vat_id = :vat_id WHERE tenant_id = :tenant_id')->execute([
+    'tenant_id' => $tenantId,
+    'vat_id' => 'DE999999999',
+]);
+$reverseChargePreflightWithVat = $service->preflightDocument($tenantId, $reverseChargeInvoiceId);
+assertTrue(($reverseChargePreflightWithVat['valid'] ?? false) === true, 'Cross-border EU case should pass when seller VAT ID is set.');
 
 $export = $service->exportEInvoice($tenantId, $validInvoiceId, 'xrechnung');
 assertTrue(($export['validation']['valid'] ?? false) === true, 'XRechnung export should pass XML validator.');
