@@ -4,6 +4,7 @@ import '../features/admin/presentation/dashboard_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/crud/presentation/crud_screen.dart';
 import '../features/portal/presentation/portal_documents_screen.dart';
+import '../features/api_workbench/presentation/api_workbench_screen.dart';
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -14,6 +15,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const CrudScreen());
       case '/portal':
         return MaterialPageRoute(builder: (_) => const PortalDocumentsScreen());
+      case '/api-workbench':
+        return MaterialPageRoute(builder: (_) => const ApiWorkbenchScreen());
       case '/login':
       default:
         return MaterialPageRoute(builder: (_) => const LoginScreen());

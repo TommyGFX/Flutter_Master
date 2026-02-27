@@ -83,3 +83,23 @@ Für produktiven Einsatz sollten als nächste Schritte u. a. implementiert werde
 - Frontend (CRM): `https://crm.ordentis.de`
 - Backend API: `https://api.ordentis.de`
 - Flutter kann das API-Ziel per `--dart-define=API_BASE_URL=<url>` überschreiben (Default: `https://api.ordentis.de/api`).
+
+
+## Production Build & Deploy
+
+### Backend (Production)
+```bash
+cd backend
+cp .env.example .env
+# Alle Variablen in .env mit echten Secrets und echten Infrastrukturwerten setzen
+php -S 0.0.0.0:8080 -t public
+```
+
+### Flutter (Production Release)
+```bash
+cd flutter_app
+flutter pub get
+flutter build web --release --dart-define=API_BASE_URL=https://api.example.com/api
+```
+
+Weitere Release-/Smoke-Test-Dokumentation: `docs/PRODUCTION_RELEASE.md`.

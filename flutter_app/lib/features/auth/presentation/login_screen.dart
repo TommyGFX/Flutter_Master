@@ -12,9 +12,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final emailCtrl = TextEditingController(text: 'demo@example.com');
-  final passwordCtrl = TextEditingController(text: 'secret');
-  final tenantCtrl = TextEditingController(text: 'tenant_1');
+  final emailCtrl = TextEditingController();
+  final passwordCtrl = TextEditingController();
+  final tenantCtrl = TextEditingController();
 
   String endpoint = 'login/company';
 

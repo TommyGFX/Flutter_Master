@@ -164,6 +164,11 @@ class _SideNav extends StatelessWidget {
         _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 10, onTap: () => onSelect(10)),
         _NavTile(label: 'Katalog & Preislogik (Phase 9)', icon: Icons.sell_outlined, selected: selectedIndex == 11, onTap: () => onSelect(11)),
         ListTile(
+          leading: const Icon(Icons.api_outlined),
+          title: const Text('Endpoint Workbench (alle Backend-Endpunkte)'),
+          onTap: () => Navigator.pushNamed(context, '/api-workbench'),
+        ),
+        ListTile(
           leading: const Icon(Icons.dataset_outlined),
           title: Text(l10n.crudPlayground),
           onTap: () => Navigator.pushNamed(context, '/crud'),

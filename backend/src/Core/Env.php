@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use RuntimeException;
+
 final class Env
 {
     public static function load(string $path): void
@@ -25,5 +27,15 @@ final class Env
     public static function get(string $key, ?string $default = null): ?string
     {
         return $_ENV[$key] ?? $default;
+    }
+
+    public static function required(string $key): string
+    {
+        $value = $_ENV[$key] ?? null;
+        if (!is_string($value) || trim($value) === '') {
+            throw new RuntimeException(sprintf('Missing required env var: %s', $key));
+        }
+
+        return trim($value);
     }
 }

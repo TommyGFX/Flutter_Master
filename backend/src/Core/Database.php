@@ -18,12 +18,12 @@ final class Database
 
         $dsn = sprintf(
             'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-            Env::get('DB_HOST', '127.0.0.1'),
-            Env::get('DB_PORT', '3306'),
-            Env::get('DB_NAME', 'flutter_master')
+            Env::required('DB_HOST'),
+            Env::required('DB_PORT'),
+            Env::required('DB_NAME')
         );
 
-        self::$pdo = new PDO($dsn, Env::get('DB_USER', 'root'), Env::get('DB_PASS', ''));
+        self::$pdo = new PDO($dsn, Env::required('DB_USER'), Env::required('DB_PASS'));
         self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         self::$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
