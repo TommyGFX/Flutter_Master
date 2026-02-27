@@ -10,6 +10,7 @@ import '../../auth/auth_controller.dart';
 import '../../billing/presentation/billing_flow_screen.dart';
 import '../../billing/presentation/subscription_management_screen.dart';
 import '../../automation/presentation/automation_integrations_screen.dart';
+import '../../catalog/presentation/catalog_pricing_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -100,6 +101,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const BillingFlowScreen(),
                   const SubscriptionManagementScreen(),
                   const AutomationIntegrationsScreen(),
+                  const CatalogPricingScreen(),
                 ],
               ),
             ),
@@ -160,6 +162,7 @@ class _SideNav extends StatelessWidget {
         _NavTile(label: 'Billing E2E (Phase 1)', icon: Icons.receipt_long_outlined, selected: selectedIndex == 8, onTap: () => onSelect(8)),
         _NavTile(label: 'Abo-Management (Phase 4)', icon: Icons.subscriptions_outlined, selected: selectedIndex == 9, onTap: () => onSelect(9)),
         _NavTile(label: l10n.billingPdfMail, icon: Icons.auto_awesome_outlined, selected: selectedIndex == 10, onTap: () => onSelect(10)),
+        _NavTile(label: 'Katalog & Preislogik (Phase 9)', icon: Icons.sell_outlined, selected: selectedIndex == 11, onTap: () => onSelect(11)),
         ListTile(
           leading: const Icon(Icons.dataset_outlined),
           title: Text(l10n.crudPlayground),
