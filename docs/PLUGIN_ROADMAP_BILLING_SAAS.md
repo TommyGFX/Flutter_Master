@@ -255,7 +255,7 @@ _Status-Update (Implementierung):_ Zahlungslink-Provider-Abstraktion via Adapter
 | 6 | Reporting | In Umsetzung (Backend-MVP + Härtung Connector-Sync/Export-Streaming) | Nächster Schritt: Connector-Delivery gegen reale Lexoffice/SevDesk/FastBill-Sandboxes mit tenant-spezifischen Secrets und Monitoring abnehmen |
 | 7 | Team & Rechte | In Umsetzung (Rollen-Capability-Mapping-API inkl. tenant-spezifischer Default-Rollenprofile, Audit-Log-UX sowie Multi-Company-Kontextwechsel inkl. Membership-UX End-to-End abgesichert) | Nächster Schritt: Finale Phase-7-Abnahme gegen produktionsnahe Tenant-Daten dokumentieren |
 | 8 | Integrationen | In Umsetzung (Backend-Adapter-Worker für Workflow-Runs + Flutter-Import-Wizard-UI inkl. Preview/Execute ergänzt) | Nächster Schritt: Reale HubSpot/Pipedrive/Zapier/Make-Sandbox-Abnahme mit tenant-spezifischen Credentials und Retry-Monitoring dokumentieren |
-| 9 | Katalog/Preise | In Umsetzung (Backend-MVP + Flutter-Katalog-UI mit Angebotseditor-Preislogik integriert) | Nächster Schritt: Golden-/Widget-Tests für den Phase-9-Katalogscreen ergänzen und gegen produktionsnahe Katalogdaten abnehmen |
+| 9 | Katalog/Preise | In Umsetzung (Backend-MVP + Flutter-Katalog-UI mit Angebotseditor-Preislogik integriert; Golden-/Widget-Tests für den Phase-9-Katalogscreen ergänzt und gegen produktionsnahe Katalogdaten abgenommen) | Nächster Schritt: Phase-9-Abnahmeprotokoll inkl. Testartefakte in die Release-Dokumentation übernehmen |
 | 10 | Security/Ops | In Umsetzung (Backend-MVP implementiert) | Worker-gestützte Lösch-/Restore-Jobs + operatives Monitoring verdrahten |
 
 

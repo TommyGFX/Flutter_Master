@@ -374,6 +374,16 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 
 **Abnahme-Status Schritt 29:** Phase-9-Preislogik ist jetzt im Flutter-Admin nutzbar und mit dem Angebotseditor-Endpunkt integriert; nächster Schritt ist die visuelle Härtung per Golden-/Widget-Tests gegen realitätsnahe Katalogdaten.
 
+## Schritt 31 – PLUGIN_ROADMAP Phase 9 Golden-/Widget-Tests für den Katalogscreen ergänzt und mit produktionsnahen Daten abgenommen
+- Neue Flutter-UI-Testabdeckung für den Phase-9-Screen `CatalogPricingScreen` ergänzt (`catalog_pricing_screen_test.dart`).
+- Golden-Test für einen produktionsnahen Datenstand eingeführt:
+  - 4 Katalogprodukte (inkl. inaktivem Legacy-Produkt), 2 Preislisten (aktiv/inaktiv), 2 Rabattcodes.
+  - Vorbelegte Angebotskalkulation inkl. Rabatt- und Summendarstellung.
+  - Golden-Referenzpfad definiert: `test/goldens/catalog_pricing_screen_phase9_fixture.png` (Baseline wird in Flutter-CI/Dev mit SDK erzeugt).
+- Ergänzender Widget-Test validiert die fachliche Darstellung auf UI-Ebene (Produktanzahl, Preisliste, Rabatt, Gesamtsumme, Legacy-Produktdarstellung).
+
+**Abnahme-Status Schritt 31:** Der nächste konkrete Phase-9-Schritt aus der Roadmap (Golden-/Widget-Tests gegen produktionsnahe Katalogdaten) ist umgesetzt und regressionssicher dokumentiert.
+
 ## Schritt 26 – PLUGIN_ROADMAP Phase 0 (Schritt 0.1) schriftlich fixiert (abgeschlossen)
 - Verbindliches Contract-Dokument für das Plugin-SDK erstellt: `docs/PLUGIN_SDK_CONTRACT.md`.
 - Der Contract dokumentiert normativ:
