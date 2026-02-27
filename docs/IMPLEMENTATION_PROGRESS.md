@@ -360,6 +360,20 @@ Senior-Level Startpunkt für eine **Flutter (Web/Android/iOS) + PHP (PDO/MySQL)*
 
 **Abnahme-Status Phase 9:** Wiederverwendbare Preislogik ist als Backend-MVP umgesetzt und für Sales-/Billing-Workflows per API verfügbar.
 
+
+## Schritt 29 – PLUGIN_ROADMAP Phase 9 Flutter-Katalog-UI + Angebotseditor-Preislogik integriert
+- Flutter-Feature **`catalog_pricing`** ergänzt (`CatalogPricingScreen`, `CatalogPricingController`) und im Admin-Dashboard als neuer Navigationspunkt **"Katalog & Preislogik (Phase 9)"** verdrahtet.
+- Katalog-UI für Produktstamm integriert:
+  - Laden von Produkten, Preislisten und Rabattcodes über bestehende Phase-9-API-Endpunkte.
+  - Direkter Produkt-Create-Flow (SKU, Typ, Preis, Steuersatz) für schnelle Stammdatenpflege im Admin-Workflow.
+- Angebotseditor-Integration der Preislogik umgesetzt:
+  - Positionen aus dem Produktkatalog auswählbar (Menge/Produkt je Position).
+  - Preislisten- und Rabattcode-Auswahl sowie `sale_type` (`one_time|subscription`) in der Kalkulation berücksichtigt.
+  - Serverseitige Quote-Berechnung via `POST /api/billing/catalog/quotes/calculate` angebunden und Ergebnis (Linien + Totals + Rabattmetadaten) strukturiert visualisiert.
+- Testabdeckung im Flutter-Modul erweitert (`catalog_pricing_controller_test.dart`) für Parsing/State-Basics der Angebotskalkulation.
+
+**Abnahme-Status Schritt 29:** Phase-9-Preislogik ist jetzt im Flutter-Admin nutzbar und mit dem Angebotseditor-Endpunkt integriert; nächster Schritt ist die visuelle Härtung per Golden-/Widget-Tests gegen realitätsnahe Katalogdaten.
+
 ## Schritt 26 – PLUGIN_ROADMAP Phase 0 (Schritt 0.1) schriftlich fixiert (abgeschlossen)
 - Verbindliches Contract-Dokument für das Plugin-SDK erstellt: `docs/PLUGIN_SDK_CONTRACT.md`.
 - Der Contract dokumentiert normativ:
